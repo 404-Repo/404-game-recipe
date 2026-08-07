@@ -1,0 +1,148 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>asset check</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<style>body{margin:0;background:#22262b}canvas{display:block}</style>
+</head>
+<body>
+<script type="module">
+/**
+ * Render one asset module from four sides under fixed camera and lighting, and
+ * measure each side.
+ *
+ * The four-way view is the point. A generator that has only seen the object
+ * from the front will happily produce something beautiful from +Z and a blank
+ * box from every other direction, and a single hero screenshot will never tell
+ * you. Comparing detail across the four sides catches it automatically.
+ *
+ * Query params:
+ *   src   module URL to load (required)
+ *   size  pixel size of each view (default 320)
+ */
+import * as THREE from 'three';
+
+const q = new URLSearchParams(location.search);
+const src = q.get('src');
+const size = +(q.get('size') || 320);
+const VIEWS = ['front', 'right', 'back', 'left'];
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(size * VIEWS.length, size, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const BG = 0x22262b;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(BG);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x556677, 2.0));
+const sun = new THREE.DirectionalLight(0xffffff, 1.9);
+sun.position.set(5, 9, 7);
+scene.add(sun);
+
+/**
+ * Silhouette coverage and interior edge density for one view.
+ *
+ * Edge density is the signal that matters: a flat untextured face has almost no
+ * interior edges, so a side that is dramatically smoother than the others is a
+ * side the generator never modelled.
+ */
+function measure(ctx, x0, w, h) {
+  const d = ctx.getImageData(x0, 0, w, h).data;
+  const bg = [(BG >> 16) & 255, (BG >> 8) & 255, BG & 255];
+  const lum = new Float32Array(w * h);
+  let filled = 0;
+  for (let i = 0; i < w * h; i++) {
+    const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+    lum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (Math.abs(r - bg[0]) + Math.abs(g - bg[1]) + Math.abs(b - bg[2]) > 18) filled++;
+  }
+  let edges = 0;
+  for (let y = 1; y < h; y++) {
+    for (let x = 1; x < w; x++) {
+      const i = y * w + x;
+      if (Math.abs(lum[i] - lum[i - 1]) > 8 || Math.abs(lum[i] - lum[i - w]) > 8) edges++;
+    }
+  }
+  return {
+    coverage: +(filled / (w * h)).toFixed(4),
+    edgeDensity: filled ? +(edges / filled).toFixed(4) : 0,
+  };
+}
+
+let info = { ok: false, error: null };
+try {
+  const mod = await import(src);
+  const fn = mod.default || mod.build || mod.create;
+  if (typeof fn !== 'function') throw new Error('no default export function');
+  const obj = fn(THREE);
+  if (!obj || !obj.isObject3D) throw new Error('did not return an Object3D');
+  scene.add(obj);
+  obj.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(obj);
+  if (!isFinite(box.min.x) || box.isEmpty()) throw new Error('empty or non-finite bounding box');
+  const dim = box.getSize(new THREE.Vector3());
+  const ctr = box.getCenter(new THREE.Vector3());
+
+  let meshes = 0, tris = 0, materials = new Set();
+  obj.traverse((o) => {
+    if (!o.isMesh || !o.geometry) return;
+    meshes++;
+    const g = o.geometry;
+    const t = (g.index ? g.index.count : (g.attributes.position?.count || 0)) / 3;
+    tris += t * (o.isInstancedMesh ? o.count : 1);
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      if (m) materials.add(m.uuid);
+    }
+  });
+
+  // Four sides at a fixed elevation, orbiting the object's centre.
+  const rad = Math.max(dim.x, dim.y, dim.z) * 1.05 + 0.4;
+  VIEWS.forEach((_, i) => {
+    const a = (i * Math.PI) / 2;
+    const cam = new THREE.PerspectiveCamera(34, 1, 0.01, 1000);
+    cam.position.set(ctr.x + Math.sin(a) * rad * 1.2, ctr.y + rad * 0.55, ctr.z + Math.cos(a) * rad * 1.2);
+    cam.lookAt(ctr);
+    renderer.setViewport(i * size, 0, size, size);
+    renderer.setScissor(i * size, 0, size, size);
+    renderer.setScissorTest(true);
+    renderer.render(scene, cam);
+  });
+
+  // Read the finished canvas once, then measure each view out of it.
+  const c2 = document.createElement('canvas');
+  c2.width = renderer.domElement.width;
+  c2.height = renderer.domElement.height;
+  const ctx = c2.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(renderer.domElement, 0, 0);
+  const px = renderer.domElement.width / VIEWS.length;
+  const sides = {};
+  VIEWS.forEach((v, i) => { sides[v] = measure(ctx, i * px, px, renderer.domElement.height); });
+
+  info = {
+    ok: true,
+    meshes,
+    tris: Math.round(tris),
+    materials: materials.size,
+    size: [+dim.x.toFixed(3), +dim.y.toFixed(3), +dim.z.toFixed(3)],
+    groundOffset: +box.min.y.toFixed(3),
+    centreOffset: [+ctr.x.toFixed(3), +ctr.z.toFixed(3)],
+    sides,
+    error: null,
+  };
+} catch (e) {
+  info.error = String(e && e.message ? e.message : e).slice(0, 300);
+}
+
+window.__INFO__ = info;
+window.__DONE__ = true;
+</script>
+</body>
+</html>

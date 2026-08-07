@@ -1,0 +1,14 @@
+{
+  "name": "404-gamegen",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generate 3D game assets with an agent, and verify them before you trust them.",
+  "scripts": {
+    "verify": "node harness/verify.mjs examples/assets",
+    "serve": "node harness/serve.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "^23.0.0"
+  }
+}
