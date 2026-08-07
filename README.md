@@ -11,13 +11,15 @@ No account, no API key, no GPU, nothing to pay for. Your agent does the work.
 Read GAME.md in this repo and build me a game about <anything>.
 ```
 
-That's the whole interface. Works with Claude Code, Codex, Cursor, or anything that can read
-files and run commands.
+That's the whole interface. It needs an agent that can read files, run shell commands and look
+at images. It was built and tested with Claude Code.
 
-![two builds, driven, six frames each](docs/img/head2head.png)
+![six frames from a driven run](docs/img/example-in-motion.png)
 
-*Two games built this way, captured in motion by the harness in this repo. Every building,
-vehicle and prop in both was generated from a reference image. Nothing is hand-modelled.*
+*A game built this way, captured in motion by `harness/playtest.mjs` from this repo. It went from
+an empty directory to this in about four hours unattended: 73 reference images, 194 candidate
+meshes, 36 assets kept. Every building, vehicle and prop was generated from a reference image.
+Nothing is hand-modelled and nothing is textured from a file.*
 
 ---
 
