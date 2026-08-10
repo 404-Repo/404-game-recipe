@@ -41,15 +41,15 @@ finished game reads than any individual asset does.
 
 ## Where to get them
 
-Anything that makes images will do. A few options in rough order of effort:
+This repo does not ship an image generator, so your agent sources references itself. Anything
+that makes images will do:
 
-- **An image model you already have access to.** Fine. Do the style-locking above by hand.
+- **The agent itself.** Some agents can generate images natively. If yours can, this is the
+  shortest path; do the style-locking above by hand.
+- **An external image model.** Any image API or tool you already have access to. Same deal:
+  one style sentence, one seed or style reference, the whole set in one sitting.
 - **Photographs.** They work well, especially for vehicles and street furniture. Cut the
   background out.
-- **[Atlas](https://atlas.design).** This is what we use, and what produced the references in
-  `examples/concepts/`. It is a paid product, and the reason we reach for it is the
-  style-locking: it will hold one art direction across a whole set, which is the tedious part
-  to do by hand. Not required for anything in this repo.
 
 ## What not to do
 
