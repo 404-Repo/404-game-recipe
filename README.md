@@ -122,4 +122,4 @@ Worth being precise, because it is widely misread as a zero-shot prompt: it is a
 Any image source works for references; [docs/concept-images.md](docs/concept-images.md) covers
 what makes a good one.
 
-Built by [404](https://404.xyz). Apache 2.0 — build things with it.
+Built by [404](https://404.xyz). Apache 2.0, so build things with it.
