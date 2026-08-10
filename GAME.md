@@ -13,6 +13,11 @@ deliberately unspecific about it.
 From [Claude-of-Duty](https://github.com/mshumer/Claude-of-Duty) by Matt Shumer. Changed only
 where it names a genre. Run it.
 
+It sets an aspiration and a process, not a guarantee. Asking for AAA is what drives the loop to
+keep going; it does not mean what comes out will stand next to a hundred-million-dollar
+production. What you should expect is a game that got materially better every round because
+something was allowed to fail it.
+
 > I want you to build **&lt;the game you were asked for&gt;** at the level of the most recent AAA
 > games in its genre. It should be utterly perfect, visually beautiful, with every single thing
 > done at AAA quality—from textures to physics to anything you could think of.
@@ -61,7 +66,9 @@ its own critic because the critic was comparing stills.
 node harness/playtest.mjs <dir>
 ```
 
-plays the game and captures six frames while it moves. For it to work, expose:
+plays the game and captures six frames while it moves. It drives forward, so it tests play; it
+cannot reach a menu, a death screen or a restart, and those stay yours to check. For it to work,
+expose:
 
 ```js
 window.__READY__ = true;               // loaded and startable

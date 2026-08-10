@@ -1,20 +1,18 @@
 # 404 game recipe
 
-Two things:
+### 3D assets as code, for agents that build games.
 
-1. **[404.md](404.md)** — how to generate 3D assets: your agent writes the geometry, or the
-   open model behind the live 404 competition runs on your own GPU.
-2. **[GAME.md](GAME.md)** — how to build a game, using Claude-of-Duty's prompt plus the above.
+Agents can build games now. What they cannot do is furnish them. Ask one for a city and you get
+a city of boxes, because inventing geometry out of primitives is the only 3D it has. Asset
+quality is the ceiling on every agent-built game we have seen, including our own.
 
-The default path needs no account, no API key, no GPU, nothing to pay for. Your agent does the
-work.
+404 generates 3D as **code**: one JavaScript module per object that returns a Three.js `Group`.
+No mesh files, no textures, nothing to download. An agent can read an asset, change it and place
+it, which is not true of anything it fetches as a binary.
 
-```
-Read GAME.md in this repo and build me a game about <anything>.
-```
-
-That's the whole interface. It needs an agent that can read files, run shell commands and look
-at images. It was built and tested with Claude Code.
+404 also runs a continuous open competition to push image-to-code quality, and the winning
+weights are open. This repository is the whole method, free: how to make assets this way, and how
+to build a game out of them.
 
 ![six frames from a driven run](docs/img/example-in-motion.png)
 
@@ -23,20 +21,36 @@ an empty directory to this in about four hours unattended: 73 reference images, 
 meshes, 36 assets kept. Every building, vehicle and prop was generated from a reference image.
 Nothing is hand-modelled and nothing is textured from a file.*
 
+```
+Read GAME.md in this repo and build me a game about <anything>.
+```
+
+That's the whole interface. It needs an agent that can read files, run shell commands and look
+at images. It was built and tested with Claude Code.
+
 ---
 
-## 1. The assets
+## Why code instead of meshes
 
-404 generates 3D as **code**: one JavaScript module per object returning a Three.js `Group`. No
-mesh files, nothing to download.
+- **An agent can edit it.** A module is source. It can change a proportion, a colour or a part
+  breakdown by editing lines, which it cannot do to a binary mesh.
+- **It diffs.** Assets live in git next to the game, and a change to one is reviewable.
+- **There is no texture pipeline.** No UVs, no image files, no loaders, no missing-texture pink.
+- **It is small.** A prop is a few kilobytes of source, so a whole set costs less than one
+  photograph.
+- **It is inspectable.** When an asset comes out wrong you can read why, which is the difference
+  between fixing a generator and rerolling it.
+
+## 1. The assets
 
 The method is one reference image, three independent attempts at geometry, a render from four
 sides, and a choice made by looking. Who writes the geometry is up to you: your agent, or the
 open model behind the leader of the live
 [404 generation competition](https://github.com/404-Repo/404-active-competition), one-click
-deployed on your own GPU. [404.md](404.md) covers both.
+deployed on your own GPU. [404.md](404.md) covers both. The default path needs no account, no
+API key, no GPU and nothing to pay for.
 
-We measured it on ten objects. One arm got a single attempt, the other got three plus
+We measured the loop on ten objects. One arm got a single attempt, the other got three plus
 verification and a choice. Same model, same references. The second won on essentially every
 object, and the difference was entirely the loop. It caught an inverted rotation sign that flung
 a car's windscreen into space, and a water tank built 20% too tall because the reference photo
@@ -70,20 +84,32 @@ from primitives it invents.
 git clone https://github.com/404-Repo/404-game-recipe
 cd 404-game-recipe
 npm install
-node harness/selftest/run.mjs      # proves the verifier actually catches things
+npm run selftest      # proves the verifier actually catches things
 ```
+
+Then point your agent at [GAME.md](GAME.md), or at [404.md](404.md) if you only want assets.
 
 | | |
 |---|---|
-| **[404.md](404.md)** | Generating assets with your own agent. |
+| **[404.md](404.md)** | Generating assets, with your agent or the open model. |
 | **[GAME.md](GAME.md)** | Building a game with COD's prompt plus 404. |
+| **[docs/asset-contract.md](docs/asset-contract.md)** | What every asset module must be. |
 | **[docs/concept-images.md](docs/concept-images.md)** | Reference images: what makes a good one, and where to get them. |
-| **[harness/wrap.mjs](harness/wrap.mjs)** | Rescales open-model output into this repo's contract. |
+| **[docs/traps.md](docs/traps.md)** | Bugs in this domain that produce wrong output *silently*. Read first. |
 | **[harness/verify.mjs](harness/verify.mjs)** | Renders every asset from four sides. Catches what review misses. |
+| **[harness/wrap.mjs](harness/wrap.mjs)** | Rescales open-model output into this repo's contract. |
 | **[harness/playtest.mjs](harness/playtest.mjs)** | Plays the finished game and captures it **in motion**. |
 | **[harness/selftest/](harness/selftest/)** | Proves the verifier fires, against deliberately broken fixtures. |
 | **[harness/assetlib.js](harness/assetlib.js)** | The loader. Copy it, don't rewrite it. |
-| **[docs/traps.md](docs/traps.md)** | Bugs in this domain that produce wrong output *silently*. Read first. |
+
+Every tool takes the directory you are working in as its argument, so nothing here assumes a
+layout:
+
+```bash
+node harness/verify.mjs   my_assets/
+node harness/wrap.mjs     pod_out/fuel_barrel.js 0.88 -o my_assets/fuel_barrel.js
+node harness/playtest.mjs my_game/
+```
 
 ---
 

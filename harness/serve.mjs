@@ -28,5 +28,5 @@ createServer((req, res) => {
   fs.createReadStream(file).pipe(res);
 }).listen(port, () => {
   console.log(`serving ${ROOT} on http://localhost:${port}`);
-  console.log(`game:   http://localhost:${port}/examples/game/`);
+  console.log(`your game: http://localhost:${port}/<its-directory>/`);
 });

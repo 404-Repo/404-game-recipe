@@ -2,7 +2,7 @@
 /**
  * The gate. Run this on a directory of asset modules before you trust any of them.
  *
- *   node harness/verify.mjs examples/assets
+ *   node harness/verify.mjs <dir-of-asset-modules>
  *
  * It parses each module, loads it in a real browser, renders it from four sides,
  * measures it, and writes a picture you can look at. It exits non-zero if
@@ -25,7 +25,15 @@ import puppeteer from 'puppeteer';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const dir = path.resolve(process.argv[2] || 'examples/assets');
+if (!process.argv[2]) {
+  console.error('usage: node harness/verify.mjs <dir-of-asset-modules>');
+  process.exit(1);
+}
+const dir = path.resolve(process.argv[2]);
+if (!fs.existsSync(dir)) {
+  console.error(`no such directory: ${dir}`);
+  process.exit(1);
+}
 const outDir = path.join(dir, '_verify');
 
 const LIMITS = {

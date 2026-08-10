@@ -2,7 +2,12 @@
 /**
  * Play the game and photograph it moving.
  *
- *   node harness/playtest.mjs examples/game
+ *   node harness/playtest.mjs <dir-containing-the-game's-index.html>
+ *
+ * The directory is given relative to the repo root, because that is what gets
+ * served. It drives forward and photographs the result, which means it tests
+ * play. It cannot reach a menu, a death screen or a restart, so those stay
+ * yours to check.
  *
  * Two habits are baked in here because skipping either one wasted days.
  *
@@ -24,7 +29,15 @@ import puppeteer from 'puppeteer';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const target = (process.argv[2] || 'examples/game').replace(/^\/+|\/+$/g, '');
+if (!process.argv[2]) {
+  console.error("usage: node harness/playtest.mjs <dir-containing-the-game's-index.html>");
+  process.exit(1);
+}
+const target = process.argv[2].replace(/^\/+|\/+$/g, '');
+if (!fs.existsSync(path.join(ROOT, target, 'index.html'))) {
+  console.error(`no index.html in ${path.join(ROOT, target)}`);
+  process.exit(1);
+}
 const outDir = path.join(ROOT, target, '_playtest');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',

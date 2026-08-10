@@ -1,11 +1,11 @@
 {
-  "name": "404-gamegen",
+  "name": "404-game-recipe",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Generate 3D game assets with an agent, and verify them before you trust them.",
+  "description": "Generate 3D game assets as code with an agent, verify them, and build a game out of them.",
   "scripts": {
-    "verify": "node harness/verify.mjs examples/assets",
+    "selftest": "node harness/selftest/run.mjs",
     "serve": "node harness/serve.mjs"
   },
   "dependencies": {
