@@ -104,11 +104,26 @@ try {
   });
 
   // Four sides at a fixed elevation, orbiting the object's centre.
-  const rad = Math.max(dim.x, dim.y, dim.z) * 1.05 + 0.4;
+  //
+  // The distance comes from the field of view, so the whole object fits. Sizing
+  // the orbit off the largest dimension instead crops everything big: at 34
+  // degrees the frame holds about 0.85 of what that pushed away, so a 13m
+  // apartment block lost its roof and its ground floor while a dumpster sat
+  // comfortably inside. Fitting the bounding SPHERE rather than one dimension
+  // also frames every object and every side identically, which is the whole
+  // premise of putting them in one sheet.
+  const FOV = 34;
+  const ELEV = 0.43;                                 // radians, about 25 degrees
+  const radius = 0.5 * Math.hypot(dim.x, dim.y, dim.z);
+  const dist = (radius / Math.sin((FOV / 2) * (Math.PI / 180))) * 1.05;
   VIEWS.forEach((_, i) => {
     const a = (i * Math.PI) / 2;
-    const cam = new THREE.PerspectiveCamera(34, 1, 0.01, 1000);
-    cam.position.set(ctr.x + Math.sin(a) * rad * 1.2, ctr.y + rad * 0.55, ctr.z + Math.cos(a) * rad * 1.2);
+    const cam = new THREE.PerspectiveCamera(FOV, 1, dist * 0.01, dist * 10);
+    cam.position.set(
+      ctr.x + Math.sin(a) * dist * Math.cos(ELEV),
+      ctr.y + dist * Math.sin(ELEV),
+      ctr.z + Math.cos(a) * dist * Math.cos(ELEV),
+    );
     cam.lookAt(ctr);
     renderer.setViewport(i * size, 0, size, size);
     renderer.setScissor(i * size, 0, size, size);
