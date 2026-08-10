@@ -14,6 +14,7 @@
  */
 import { spawnSync } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -58,6 +59,41 @@ const floating = report.find((x) => x.name === 'floating');
 const centred = floating && floating.problems.some((p) => p.includes('not centred'));
 console.log(`${centred ? 'caught  ' : 'MISSED  '}${'floating'.padEnd(16)} expected "not centred"`);
 if (!centred) bad++;
+
+/* ---------------------------------------------------------------------------
+ * The gate must also be right about GOOD assets, from anywhere on disk.
+ *
+ * This half exists because the verifier used to serve only the repo root. An
+ * asset directory outside the tree got a module URL the server refused, so
+ * every asset in it failed with "Failed to fetch dynamically imported module"
+ * and the run reported 0/N clean. The files were fine. A gate that calls a
+ * perfect pack broken, in the vocabulary of a broken asset, sends you to debug
+ * a generator that was never wrong, and the false negative is invisible unless
+ * something checks for it.
+ */
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'recipe-outoftree-'));
+fs.copyFileSync(path.join(HERE, 'good/clean.js'), path.join(tmp, 'clean.js'));
+
+console.log(`\nrunning the gate on a clean asset from OUTSIDE the tree (${tmp})\n`);
+const out = spawnSync(process.execPath, [path.join(ROOT, 'harness/verify.mjs'), tmp],
+  { encoding: 'utf8' });
+process.stdout.write(out.stdout || '');
+
+const outReport = path.join(tmp, '_verify/report.json');
+let outOk = false;
+if (fs.existsSync(outReport)) {
+  const rows = JSON.parse(fs.readFileSync(outReport, 'utf8'));
+  const row = rows.find((x) => x.name === 'clean');
+  const fetchFailed = row && row.problems.some((p) => p.includes('dynamically imported module'));
+  outOk = out.status === 0 && row && row.ok && !fetchFailed;
+  if (fetchFailed) {
+    console.log('\nMISSED  out-of-tree     the server would not serve the target directory');
+  }
+}
+console.log(`${outOk ? 'caught  ' : 'MISSED  '}${'out-of-tree'.padEnd(16)} ` +
+            'expected a clean asset outside the repo to pass');
+if (!outOk) bad++;
+fs.rmSync(tmp, { recursive: true, force: true });
 
 console.log(bad ? `\n${bad} check(s) did not fire. The gate is not protecting you.`
                 : '\nevery check fired. the gate works.');
