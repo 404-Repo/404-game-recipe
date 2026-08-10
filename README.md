@@ -105,13 +105,20 @@ Then point your agent at [GAME.md](GAME.md), or at [404.md](404.md) if you only 
 | **[harness/assetlib.js](harness/assetlib.js)** | The loader. Copy it, don't rewrite it. |
 
 Every tool takes the directory you are working in as its argument, so nothing here assumes a
-layout:
+layout. The directory can be relative or absolute, and it does not have to be inside this repo:
 
 ```bash
 node harness/verify.mjs   my_assets/
+node harness/verify.mjs   ~/somewhere/else/assets
 node harness/wrap.mjs     pod_out/fuel_barrel.js 0.88 -o my_assets/fuel_barrel.js
 node harness/playtest.mjs my_game/
+node harness/playtest.mjs /abs/path/to/my_game
 ```
+
+Both tools serve your directory under its own prefix, so a path inside it resolves normally and
+a path that climbs above it, such as a game's `../harness/assetlib.js`, still reaches this repo.
+`harness/selftest/run.mjs` checks this, because the version that only served the repo root
+failed every asset in an outside directory with a message that read like a broken asset.
 
 ---
 
