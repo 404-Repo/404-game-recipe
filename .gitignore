@@ -1,6 +1,7 @@
-node_modules/
+# Anchored and unslashed so they also match a local symlink, which
+# "node_modules/" does not. Two symlinks got tracked that way once.
+/node_modules
+/work
 _verify/
 _playtest/
 .DS_Store
-concepts/
-assets/

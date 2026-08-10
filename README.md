@@ -26,7 +26,8 @@ Read GAME.md in this repo and build me a game about <anything>.
 ```
 
 That's the whole interface. It needs an agent that can read files, run shell commands and look
-at images. It was built and tested with Claude Code.
+at images, and a machine with Node 20 or newer. A GPU is only involved if you choose the
+open-model path, and it is a rented one. It was built and tested with Claude Code.
 
 ---
 
@@ -96,6 +97,7 @@ Then point your agent at [GAME.md](GAME.md), or at [404.md](404.md) if you only 
 | **[docs/asset-contract.md](docs/asset-contract.md)** | What every asset module must be. |
 | **[docs/concept-images.md](docs/concept-images.md)** | Reference images: what makes a good one, and where to get them. |
 | **[docs/traps.md](docs/traps.md)** | Bugs in this domain that produce wrong output *silently*. Read first. |
+| **[docs/verify-loop.md](docs/verify-loop.md)** | What the verifier and the playtest actually check, and why. |
 | **[harness/verify.mjs](harness/verify.mjs)** | Renders every asset from four sides. Catches what review misses. |
 | **[harness/wrap.mjs](harness/wrap.mjs)** | Rescales open-model output into this repo's contract. |
 | **[harness/playtest.mjs](harness/playtest.mjs)** | Plays the finished game and captures it **in motion**. |
