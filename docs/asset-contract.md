@@ -48,6 +48,22 @@ so it is the one part you should not change.
 - Model the structure. If the reference has wheels, panels, railings, a roof or fittings, build
   them, rather than approximating the whole thing as a decorated box.
 
+## Surfaces
+
+Materials in an asset are flat colours, and that is correct: surfaces are applied
+at load time by `harness/surfaces.js`, over the built asset, so modules stay
+import-free exactly as above.
+
+An asset can declare what a material is made of by naming it after a recipe,
+which beats any amount of inference from colour:
+
+```js
+const wall = new THREE.MeshStandardMaterial({ color: 0xbdb6a8, roughness: 0.9 });
+wall.name = 'stone';   // plaster | stone | timber | tile | metal | fabric | foliage | ground
+```
+
+Naming is optional and nothing breaks without it. See [surfaces.md](surfaces.md).
+
 ## Cost
 
 There is no hard triangle limit, but there is a sane band, and `verify.mjs` warns outside

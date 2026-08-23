@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>surface compare</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<style>body{margin:0;background:#f2f2f0}canvas{display:block}</style>
+</head>
+<body>
+<script type="module">
+/**
+ * The same asset twice under one camera and one rig: as written on the left,
+ * with procedural surfaces on the right. Nothing else differs, so anything you
+ * can see is the texturing.
+ *
+ * Draw calls are counted after bakeStatic on both, because that is the number
+ * texturing can quietly ruin.
+ */
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { applySurfaces } from './surfaces.js';
+import { bakeStatic } from './assetlib.js';
+
+const q = new URLSearchParams(location.search);
+const size = +(q.get('size') || 900);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(size * 2, size, false);
+renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.autoClear = false;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf2f2f0);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.5;
+
+const key = new THREE.DirectionalLight(0xfff2e0, 3.1);
+key.position.set(-6, 8, 7);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.bias = -0.0005;
+key.shadow.normalBias = 0.02;
+scene.add(key);
+scene.add(new THREE.DirectionalLight(0xbfd4ff, 0.75).translateX(7).translateY(3).translateZ(-5));
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d4cc, 0.7));
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.22 }));
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -0.003;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const mod = await import(q.get('src'));
+const build = mod.default || mod.build || mod.create;
+
+function seat(o) {
+  o.updateMatrixWorld(true);
+  const b = new THREE.Box3().setFromObject(o);
+  const c = b.getCenter(new THREE.Vector3());
+  o.position.sub(new THREE.Vector3(c.x, b.min.y, c.z));
+  o.updateMatrixWorld(true);
+  return b.getSize(new THREE.Vector3());
+}
+
+const plain = build(THREE);
+const textured = build(THREE);
+const dim = seat(plain);
+seat(textured);
+const stats = applySurfaces(THREE, textured);
+for (const o of [plain, textured]) o.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+
+const radius = Math.hypot(dim.x, dim.y, dim.z) / 2;
+const FOV = 30;
+const dist = (radius / Math.sin((FOV * Math.PI / 180) / 2)) * 0.94;
+const az = 38 * Math.PI / 180, el = 14 * Math.PI / 180;
+const target = new THREE.Vector3(0, dim.y * 0.46, 0);
+const cam = new THREE.PerspectiveCamera(FOV, 1, 0.01, 900);
+cam.position.set(target.x + Math.sin(az) * Math.cos(el) * dist,
+                 target.y + Math.sin(el) * dist,
+                 target.z + Math.cos(az) * Math.cos(el) * dist);
+cam.lookAt(target);
+cam.updateProjectionMatrix();
+
+function shoot(obj, i) {
+  scene.add(obj);
+  renderer.setViewport(i * size, 0, size, size);
+  renderer.setScissor(i * size, 0, size, size);
+  renderer.setScissorTest(true);
+  renderer.clear();
+  renderer.render(scene, cam);
+  const draws = renderer.info.render.calls;
+  scene.remove(obj);
+  return draws;
+}
+shoot(plain, 0);
+shoot(textured, 1);
+
+/** What the asset costs in a scene: merged, as a game would use it. */
+function bakedDraws(obj) {
+  const baked = bakeStatic(obj.clone(true));
+  scene.add(baked);
+  renderer.setViewport(0, 0, size, size);
+  renderer.setScissor(0, 0, size, size);
+  renderer.setScissorTest(true);
+  renderer.clear();
+  renderer.render(scene, cam);
+  const n = renderer.info.render.calls;
+  scene.remove(baked);
+  return n;
+}
+const drawsBefore = bakedDraws(plain);
+const drawsAfter = bakedDraws(textured);
+
+// Redraw the pair so the screenshot is the comparison, not the last probe.
+shoot(plain, 0);
+shoot(textured, 1);
+
+window.__INFO__ = { ...stats, drawsBefore, drawsAfter,
+                    size: [+dim.x.toFixed(2), +dim.y.toFixed(2), +dim.z.toFixed(2)] };
+window.__DONE__ = true;
+</script>
+</body>
+</html>

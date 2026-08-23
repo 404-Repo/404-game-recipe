@@ -28,14 +28,20 @@
  */
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+import { applySurfaces } from './surfaces.js';
 
 const cache = new Map();   // url -> Promise<prototype>
 
 function materialKey(m) {
   if (!m) return 'none';
+  // Maps have to be part of the key. Two materials can agree on every scalar and
+  // still carry different surfaces, and merging those produces an asset wearing
+  // one part's texture on another part's geometry.
+  const tex = (t) => (t ? `${t.uuid}:${t.repeat.x},${t.repeat.y}` : '-');
   return [
     m.type, m.color?.getHexString?.(), m.roughness, m.metalness, m.flatShading,
     m.transparent, m.opacity, m.side, m.emissive?.getHexString?.(), m.vertexColors,
+    tex(m.map), tex(m.roughnessMap), tex(m.normalMap),
   ].join('|');
 }
 
@@ -180,9 +186,11 @@ async function loadPrototype(url) {
 }
 
 /**
- * ASSET(url, {height}) -> a fresh Object3D you can position and rotate.
+ * ASSET(url, {height, surfaces}) -> a fresh Object3D you can position and rotate.
  * `height` is the finished height in metres; omit it to keep native scale.
- * Never throws into a game loop: an unloadable asset returns an empty Group.
+ * `surfaces` applies procedural albedo, roughness and normal maps; see
+ * docs/surfaces.md. Never throws into a game loop: an unloadable asset returns
+ * an empty Group.
  */
 export async function ASSET(url, opts = {}) {
   let proto;
@@ -198,6 +206,9 @@ export async function ASSET(url, opts = {}) {
     inst.scale.setScalar(opts.height / native.y);
   }
   inst.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  // Surfaces are applied per instance rather than on the cached prototype, so a
+  // game can have a textured and an untextured copy of the same asset.
+  if (opts.surfaces) applySurfaces(THREE, inst, opts.surfaces === true ? {} : opts.surfaces);
   return inst;
 }
 
