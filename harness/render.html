@@ -86,7 +86,22 @@ try {
   scene.add(obj);
   obj.updateMatrixWorld(true);
 
-  const box = new THREE.Box3().setFromObject(obj);
+  // Box3.setFromObject unions each mesh's own bounding box after transform, so a
+  // rotated part reports the box of its box. A four-segment cylinder turned 45
+  // degrees measured 0.9 m against a true 0.45 m, which fails an asset on size
+  // for a rotation that is visually correct. Measure the vertices instead.
+  const box = new THREE.Box3();
+  const _v = new THREE.Vector3();
+  obj.updateMatrixWorld(true);
+  obj.traverse((n) => {
+    const pos = n.isMesh && n.geometry && n.geometry.attributes.position;
+    if (!pos) return;
+    for (let i = 0; i < pos.count; i++) {
+      _v.fromBufferAttribute(pos, i).applyMatrix4(n.matrixWorld);
+      box.expandByPoint(_v);
+    }
+  });
+  if (box.isEmpty()) box.setFromObject(obj);
   if (!isFinite(box.min.x) || box.isEmpty()) throw new Error('empty or non-finite bounding box');
   const dim = box.getSize(new THREE.Vector3());
   const ctr = box.getCenter(new THREE.Vector3());

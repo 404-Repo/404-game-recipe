@@ -49,10 +49,17 @@ const LIMITS = {
 // --- a static server, because ES modules will not import from file:// ---------
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
                '.png': 'image/png', '.json': 'application/json', '.css': 'text/css' };
+// Assets are commonly kept outside this repo, in the project being built, so the
+// target directory is mounted at /@assets alongside the repo itself. Serving only
+// from ROOT meant an external directory failed every module with "Failed to fetch
+// dynamically imported module", which points at nothing.
 const server = createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
-  const file = path.join(ROOT, rel);
-  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  const file = rel.startsWith('/@assets/')
+    ? path.join(dir, rel.slice('/@assets/'.length))
+    : path.join(ROOT, rel);
+  const base = rel.startsWith('/@assets/') ? dir : ROOT;
+  if (!file.startsWith(base) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('not found');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
@@ -92,7 +99,7 @@ for (const f of files) {
   // 2. does it load, and what does it look like from every side
   const page = await browser.newPage();
   await page.setViewport({ width: 320 * 4, height: 320, deviceScaleFactor: 1 });
-  const rel = '/' + path.relative(ROOT, abs).split(path.sep).join('/');
+  const rel = '/@assets/' + path.relative(dir, abs).split(path.sep).join('/');
   await page.goto(`${BASE}/harness/render.html?src=${encodeURIComponent(rel)}&size=320`,
     { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction('window.__DONE__', { timeout: 90000 }).catch(() => {});
@@ -159,11 +166,11 @@ const sheetHtml = `<!doctype html><meta charset="utf-8">
 ${rows.map((r) => `<div class="r"><div class="h"><span class="n">${r.name}</span>
   <span class="${r.ok ? 's' : 'b'}">${r.ok ? 'ok' : r.problems.join(' | ')}</span>
   <span style="color:#888">${r.tris ?? '?'} tris, ${r.meshes ?? '?'} meshes</span></div>
-  <img src="/${path.relative(ROOT, path.join(outDir, r.name + '.png')).split(path.sep).join('/')}"></div>`).join('\n')}`;
+  <img src="/@assets/${path.relative(dir, path.join(outDir, r.name + '.png')).split(path.sep).join('/')}"></div>`).join('\n')}`;
 fs.writeFileSync(path.join(outDir, 'sheet.html'), sheetHtml);
 const sp = await browser.newPage();
 await sp.setViewport({ width: 1320, height: 900 });
-await sp.goto(`${BASE}/${path.relative(ROOT, path.join(outDir, 'sheet.html')).split(path.sep).join('/')}`,
+await sp.goto(`${BASE}/@assets/${path.relative(dir, path.join(outDir, 'sheet.html')).split(path.sep).join('/')}`,
   { waitUntil: 'networkidle0', timeout: 60000 });
 await sp.screenshot({ path: path.join(outDir, 'sheet.png'), fullPage: true });
 await sp.close();

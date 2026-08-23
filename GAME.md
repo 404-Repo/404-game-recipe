@@ -55,6 +55,11 @@ same way you source asset references — whatever image tool your agent has
 ([docs/concept-images.md](docs/concept-images.md)) — but as full scene frames, not cutout
 objects.
 
+**Give every sub-agent its own scratch directory.** The prompt tells you to fan
+out, and agents working in parallel will pick the same obvious filename for a
+throwaway test script. We have watched one overwrite another's working file
+mid-run. Both recovered, but neither knew why its file had changed.
+
 **The critic has to be able to fail the round.** A reviewer that writes notes is not a gate. If
 it cannot send the work back, quality stops wherever the first pass landed.
 
