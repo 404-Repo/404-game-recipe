@@ -17,7 +17,17 @@ import { createServer } from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import puppeteer from 'puppeteer';
+
+// puppeteer is the one dependency, and an agent that arrives at GAME.md without
+// having run npm install gets a Node internals stack trace naming a file it did
+// not write. Say the actual thing instead.
+let puppeteer;
+try {
+  puppeteer = (await import('puppeteer')).default;
+} catch {
+  console.error('puppeteer is not installed. Run "npm install" in this repo first.');
+  process.exit(1);
+}
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');

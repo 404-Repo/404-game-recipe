@@ -2,6 +2,15 @@
 
 Two ingredients. The prompt below builds the game. [404.md](404.md) makes the 3D it needs.
 
+First, once, or the gate below cannot run:
+
+```bash
+git clone https://github.com/404-Repo/404-game-recipe
+cd 404-game-recipe
+npm install
+npm run selftest      # proves the verifier actually catches things
+```
+
 Nothing else in this repo tells you how to work. How you break the problem up, what the
 architecture is, what order you do things in, all of that is yours, and the prompt is
 deliberately unspecific about it.
