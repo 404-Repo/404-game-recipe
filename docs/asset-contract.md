@@ -46,12 +46,18 @@ so it is the one part you should not change.
   so measure vertices:
 
   ```js
-  const box = new THREE.Box3(), v = new THREE.Vector3();
+  const box = new THREE.Box3(), v = new THREE.Vector3(), m = new THREE.Matrix4(), im = new THREE.Matrix4();
   g.updateMatrixWorld(true);
-  g.traverse((n) => { const p = n.isMesh && n.geometry.attributes.position; if (!p) return;
-    for (let i = 0; i < p.count; i++) box.expandByPoint(v.fromBufferAttribute(p, i).applyMatrix4(n.matrixWorld)); });
+  g.traverse((n) => {
+    const p = n.isMesh && n.geometry.attributes.position; if (!p) return;
+    const put = (mat) => { for (let i = 0; i < p.count; i++) box.expandByPoint(v.fromBufferAttribute(p, i).applyMatrix4(mat)); };
+    // An InstancedMesh keeps its copies in the instance matrices, not in the
+    // geometry. Skip this and you measure one copy of the prototype.
+    if (n.isInstancedMesh) { for (let c = 0; c < n.count; c++) { n.getMatrixAt(c, im); put(m.multiplyMatrices(n.matrixWorld, im)); } return; }
+    put(n.matrixWorld);
+  });
   const c = box.getCenter(new THREE.Vector3());
-  g.children.forEach((m) => { m.position.x -= c.x; m.position.y -= box.min.y; m.position.z -= c.z; });
+  g.children.forEach((o) => { o.position.x -= c.x; o.position.y -= box.min.y; o.position.z -= c.z; });
   ```
 
 - Real-world scale, in **metres**. A dumpster is about 2m long, a four-storey building about

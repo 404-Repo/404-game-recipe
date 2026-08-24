@@ -232,12 +232,25 @@ const minFps = fpsVals.length ? Math.min(...fpsVals) : 0;
 const sheet = `<!doctype html><meta charset="utf-8">
 <style>body{margin:0;background:#111;display:grid;grid-template-columns:1fr 1fr;gap:4px}
 img{width:100%;display:block}</style>
-${frames.map((f) => `<img src="${GAME_PREFIX}_playtest/${path.basename(f)}">`).join('')}`;
+${frames.map((f) => `<img src="${GAME_URL}_playtest/${path.basename(f)}">`).join('')}`;
 fs.writeFileSync(path.join(outDir, 'strip.html'), sheet);
 const sp = await browser.newPage();
 await sp.setViewport({ width: 1300, height: 900 });
-await sp.goto(`${BASE}${GAME_PREFIX}_playtest/strip.html`,
+await sp.goto(`${BASE}${GAME_URL}_playtest/strip.html`,
   { waitUntil: 'networkidle0' });
+// The filmstrip is the one artefact this whole tool exists to produce, and for a
+// while it was a screenshot of the words "not found": the strip page was fetched
+// from the mount root instead of the game's own directory, so every img 404'd and
+// nobody noticed, because nobody screenshots their screenshot. Prove the pictures
+// are actually in it.
+const stripOk = await sp.evaluate(() => {
+  const imgs = [...document.images];
+  return { total: imgs.length, loaded: imgs.filter((i) => i.naturalWidth > 0).length };
+});
+const stripProblem = (stripOk.loaded !== stripOk.total || !stripOk.total)
+  ? `the filmstrip is empty: ${stripOk.loaded} of ${stripOk.total} frames loaded into it. ` +
+    `The individual frames in ${path.relative(process.cwd(), outDir)} are still good.`
+  : null;
 await sp.screenshot({ path: path.join(outDir, 'filmstrip.png'), fullPage: true });
 await sp.close();
 
@@ -256,6 +269,7 @@ const peakDraws = Math.max(...samples.filter(Boolean).map((s) => s.draws || 0));
 const peakTris = Math.max(...samples.filter(Boolean).map((s) => s.tris || 0));
 
 const problems = [];
+if (stripProblem) problems.push(stripProblem);
 if (!hasPos) {
   problems.push(`the game reports no __GAME__.pos, so this ran on wall clock and nothing below ` +
                 `about movement means anything. Expose it.`);

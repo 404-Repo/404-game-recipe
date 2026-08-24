@@ -113,9 +113,30 @@ try {
   const box = new THREE.Box3();
   const _v = new THREE.Vector3();
   obj.updateMatrixWorld(true);
+  //
+  // An InstancedMesh has to be expanded here too. Its geometry is ONE prototype
+  // and its copies live only in the instance matrices, so walking the vertices
+  // and ignoring those measures a single copy: ten slabs stacked into a 2m
+  // column reported 0.1m tall, and then the size test, the ground test, the
+  // centring test and the camera framing all went wrong together. This file
+  // already counts instanced TRIANGLES correctly a few lines below, which is
+  // how the mistake survived a reading.
+  const _m = new THREE.Matrix4();
+  const _im = new THREE.Matrix4();
   obj.traverse((n) => {
     const pos = n.isMesh && n.geometry && n.geometry.attributes.position;
     if (!pos) return;
+    if (n.isInstancedMesh) {
+      for (let c = 0; c < n.count; c++) {
+        n.getMatrixAt(c, _im);
+        _m.multiplyMatrices(n.matrixWorld, _im);
+        for (let i = 0; i < pos.count; i++) {
+          _v.fromBufferAttribute(pos, i).applyMatrix4(_m);
+          box.expandByPoint(_v);
+        }
+      }
+      return;
+    }
     for (let i = 0; i < pos.count; i++) {
       _v.fromBufferAttribute(pos, i).applyMatrix4(n.matrixWorld);
       box.expandByPoint(_v);

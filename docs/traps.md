@@ -138,6 +138,33 @@ drawn, and a bake that fixes draw calls quietly costs you everything culling was
 
 ---
 
+## Measuring an InstancedMesh by its geometry measures one copy
+
+The entry above tells you an `InstancedMesh` holds one prototype plus a matrix per copy, and that
+any loop which walks a scene and reads `o.geometry` keeps a single instance. The same is true of
+anything that walks VERTICES to find the bounds, and that is the technique this repo recommends
+in place of `Box3.setFromObject`.
+
+Ten slabs stacked into a 2 m column measured **0.1 m tall with its base below the floor**, because
+the copies exist only in the instance matrices. Then everything derived from that box goes wrong
+together: the size test, the base-at-y=0 test, the centring test, and the camera, which frames its
+views from the same box and crops through the middle of the object.
+
+```js
+if (n.isInstancedMesh) {
+  for (let c = 0; c < n.count; c++) { n.getMatrixAt(c, im); put(m.multiplyMatrices(n.matrixWorld, im)); }
+  return;
+}
+put(n.matrixWorld);
+```
+
+This shipped in `render.html`, twelve lines above a loop that counts instanced *triangles*
+correctly, and in the snippet `asset-contract.md` hands you to copy. Both are fixed. It is here
+because the lesson is not about instancing: a warning you have written down is not the same as a
+warning you have applied everywhere it holds.
+
+---
+
 ## An ExtrudeGeometry bevel makes the object bigger than you drew it
 
 `bevelSize` does not round the edges of your profile. It grows the profile OUTWARD by that much

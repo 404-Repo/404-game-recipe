@@ -85,7 +85,9 @@ if (!centred) bad++;
  */
 const GOOD = fs.readdirSync(path.join(HERE, 'good')).filter((f) => f.endsWith('.js')).sort();
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'recipe-outoftree-'));
-for (const f of GOOD) fs.copyFileSync(path.join(HERE, 'good', f), path.join(tmp, f));
+for (const f of fs.readdirSync(path.join(HERE, 'good'))) {
+  fs.copyFileSync(path.join(HERE, 'good', f), path.join(tmp, f));   // .js and any .expect.json beside it
+}
 
 console.log(`\nrunning the gate on clean assets from OUTSIDE the tree (${tmp})\n`);
 const out = spawnSync(process.execPath, [path.join(ROOT, 'harness/verify.mjs'), tmp],
@@ -115,6 +117,17 @@ fs.rmSync(tmp, { recursive: true, force: true });
  * threshold. So run the same asset again with the declaration stripped out and
  * require the warning to appear. Either run alone is not a test.
  */
+/* An asset whose copies live in instance matrices measures as one copy of its
+ * prototype unless the bounds walk expands them. It shipped that way: ten slabs
+ * stacked two metres tall reported 0.1m, and size, ground, centring and camera
+ * framing went wrong together. racking.js is 2.0m tall and says so in its
+ * expect.json, so this asserts the bounds AND the stated size at once. */
+const rack = outRows.find((x) => x.name === 'racking');
+const rackOk = !!rack && rack.ok && Math.abs((rack.size ? rack.size[1] : 0) - 2.0) < 0.05;
+console.log(`${rackOk ? 'caught  ' : 'MISSED  '}${'instanced bounds'.padEnd(16)} ` +
+            `expected a 2.0m instanced asset to measure 2.0m${rack && rack.size ? `, got ${rack.size[1]}` : ''}`);
+if (!rackOk) bad++;
+
 const lamp = outRows.find((x) => x.name === 'mounted_lamp');
 const lampQuiet = lamp && lamp.ok && !backWarned(lamp);
 console.log(`${lampQuiet ? 'quiet   ' : 'MISSED  '}${'mounted_lamp'.padEnd(16)} ` +
