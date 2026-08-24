@@ -72,16 +72,18 @@ node harness/playtest.mjs <dir>
 ```
 
 plays the game and captures six frames while it moves. It drives forward, so it tests play; it
-cannot reach a menu, a death screen or a restart, and those stay yours to check. For it to work,
-expose:
+cannot reach a menu, a death screen or a restart, and those stay yours to check. To drive it
+yourself, `node harness/serve.mjs <same dir>` and open the URL it prints. Both take a directory
+anywhere on disk, and both expect `assets/` beside it, which is the layout every example here
+uses. For playtest to work, expose:
 
 ```js
 window.__READY__ = true;               // loaded and startable
 window.__START__ = () => { ... };      // begin play
 window.__GAME__  = {                   // refreshed every frame
-  frame,                               // frames rendered since boot
+  pos: [x, z],                         // where the player is, in metres
   fps,                                 // from REAL elapsed time, never a clamped delta
-  speed, pos: [x, z], score, over,
+  speed, score, over,
   draws: renderer.info.render.calls,
   tris: renderer.info.render.triangles,
 };
@@ -89,9 +91,10 @@ window.__GAME__  = {                   // refreshed every frame
 
 Both comments on that object are there because getting them wrong cost real time. A frame counter
 that divides by clamped deltas is pinned to a constant and will report a healthy number on a build
-running at one frame a second. And a harness that holds inputs for a wall-clock duration advances
-a slow machine's simulation by a fraction of what it intended, then tells you the player would
-not move.
+running at one frame a second. And `pos` is what the harness steers by: it drives each leg of its
+route until the player has covered a distance in metres, because holding a key for a wall-clock
+duration under-drives a slow machine and holding it for a fixed number of frames under-drives a
+fast one. Both then report that the player would not move, about a game that is fine.
 
 ---
 
