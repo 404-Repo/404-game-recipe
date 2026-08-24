@@ -36,6 +36,14 @@ if (!fs.existsSync(dir)) {
 }
 const outDir = path.join(dir, '_verify');
 
+// An asset can declare that a face of it is meant to be blank, because it mounts
+// against something. Without this the blank-side check, which is the most
+// valuable thing in here, cries wolf on every wall lamp and awning, and a
+// newcomer learns to ignore warnings.
+//
+//   const g = new THREE.Group();
+//   g.userData.mounts = 'back';     // 'back' | 'front' | 'left' | 'right' | 'none'
+//
 const LIMITS = {
   minTris: 150,        // below this it is a placeholder, not an asset
   maxTris: 60000,      // above this something has run away, check for a lathe/sphere with huge segment counts
@@ -131,12 +139,26 @@ for (const f of files) {
   }
 
   // 4. the blank-side test
+  //
+  // A declared mounting face is exempt from the detail comparison but not from
+  // the empty test: something flush against a wall is still a silhouette when you
+  // walk behind it. The exemption is deliberately narrow, since the whole value
+  // of this check is that it is hard to talk your way out of.
+  const mounted = new Set(
+    (Array.isArray(info.mounts) ? info.mounts : [info.mounts])
+      .filter((m) => typeof m === 'string')
+      .map((m) => m.toLowerCase().trim())
+      .filter((m) => m !== 'none'),
+  );
   const sides = Object.entries(info.sides);
   const busiest = Math.max(...sides.map(([, s]) => s.edgeDensity));
   for (const [side, s] of sides) {
+    if (mounted.has(side)) continue;
     if (busiest > 0 && s.edgeDensity < LIMITS.sideRatio * busiest) {
       problems.push(`${side} face is nearly featureless next to the others, it was probably never modelled`);
     }
+  }
+  for (const [side, s] of sides) {
     if (s.coverage < 0.005) problems.push(`${side} face is empty`);
   }
 

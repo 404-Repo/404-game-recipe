@@ -116,6 +116,28 @@ never slow. `harness/playtest.mjs` detects this and says so.
 
 ---
 
+## Draw calls, not triangles, and the asset you blame is rarely the cause
+
+A town of a few hundred placed props is a few hundred separate objects, and on this kind of
+scene the per-object cost dominates the geometry cost completely. Measured on one build here:
+
+| | draws | fps |
+|---|---|---|
+| every prop placed individually | 1584 | 75 |
+| static scenery baked per block | 1020 | 115 |
+
+The trap is the diagnosis, not the fix. One asset in that scene was drawing 144 calls on its own
+and it was the obvious suspect, so we swapped it for an equivalent costing 7. Draws went from
+1585 to 1584 and the frame rate did not move. The cost was never in any one asset, it was in
+never having baked at all, and an afternoon went into the wrong object because the number
+looked damning in isolation.
+
+`bakeStatic()` in `harness/assetlib.js` merges by material. Run it **per block**, not over the
+whole world: one giant mesh cannot be frustum-culled, so every building behind the camera gets
+drawn, and a bake that fixes draw calls quietly costs you everything culling was saving.
+
+---
+
 ## Absolute asset paths break on a project subpath
 
 If you deploy to GitHub Pages under `/<repo>/`, an absolute path like `/assets/car.js` resolves

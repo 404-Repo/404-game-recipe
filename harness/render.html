@@ -156,8 +156,13 @@ try {
   const sides = {};
   VIEWS.forEach((v, i) => { sides[v] = measure(ctx, i * px, px, renderer.domElement.height); });
 
+  // An asset may declare a face it mounts against, so the gate can stop calling
+  // a wall lamp's flat back a modelling failure. Read it off the returned group.
+  const mounts = obj.userData && obj.userData.mounts ? obj.userData.mounts : null;
+
   info = {
     ok: true,
+    mounts,
     meshes,
     tris: Math.round(tris),
     materials: materials.size,

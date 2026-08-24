@@ -44,6 +44,16 @@ so it is the one part you should not change.
 
 - Recognisable **from every angle**, not just the one the reference image showed. This is the
   most common failure and the verifier tests for it specifically.
+- If a face of the object is legitimately blank because it mounts flush against something, say
+  so, and the verifier will stop reporting it as unmodelled:
+
+  ```js
+  g.userData.mounts = 'back';   // 'back' | 'front' | 'left' | 'right', or an array
+  ```
+
+  Use this for wall lamps, awnings, signs, anything that hangs. Do not use it to excuse a face
+  you did not model, because that check is the most useful one in the gate and a set of assets
+  that all opt out of it tells you nothing.
 - Correct proportions and silhouette. Silhouette is what reads at distance in a game frame.
 - Model the structure. If the reference has wheels, panels, railings, a roof or fittings, build
   them, rather than approximating the whole thing as a decorated box.

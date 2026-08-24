@@ -83,6 +83,12 @@ produce_crate_stack   132 meshes textured, 24 materials   draws 25 -> 25
 
 ## Seeing it
 
+![the same asset flat and surfaced](img/surfaces-before-after.png)
+
+*One generated townhouse under one lighting rig: the module's flat material
+colours on the left, the same asset through `surfaces.js` on the right. No file
+was loaded, no UV was authored, and the draw-call count is identical.*
+
 ```
 node harness/surface-compare.mjs <dir-or-file>
 ```
