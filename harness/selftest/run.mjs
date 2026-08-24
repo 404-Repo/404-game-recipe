@@ -29,6 +29,15 @@ const EXPECT = {
   runaway_tris: 'far heavier',
 };
 
+/** Run the gate over a directory and hand back its report. */
+function gate(dir) {
+  const res = spawnSync(process.execPath, [path.join(ROOT, 'harness/verify.mjs'), dir],
+    { encoding: 'utf8' });
+  const rp = path.join(dir, '_verify/report.json');
+  return { status: res.status, stdout: res.stdout || '',
+           report: fs.existsSync(rp) ? JSON.parse(fs.readFileSync(rp, 'utf8')) : null };
+}
+
 const backWarned = (row) =>
   !!row && row.problems.some((p) => p.startsWith('back face') && p.includes('never modelled'));
 
@@ -133,6 +142,31 @@ if (!ctlFired) {
   bad++;
 }
 fs.rmSync(ctlDir, { recursive: true, force: true });
+
+/* ---------------------------------------------------------------------------
+ * A stated size, which the gate could not use until now.
+ *
+ * Its only size test is 5cm to 300m, which passed a 9.4m facade written to a 6m
+ * brief. Both directions matter: a wrong size must fire, and a right one must
+ * stay quiet, or the check is just noise on every asset that has an expect file.
+ */
+const sizeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'recipe-size-'));
+fs.copyFileSync(path.join(HERE, 'good/clean.js'), path.join(sizeDir, 'toobig.js'));
+fs.copyFileSync(path.join(HERE, 'good/clean.js'), path.join(sizeDir, 'right.js'));
+fs.writeFileSync(path.join(sizeDir, 'toobig.expect.json'), JSON.stringify({ height: 4.0 }));
+fs.writeFileSync(path.join(sizeDir, 'right.expect.json'), JSON.stringify({ height: 1.0, tolerance: 0.2 }));
+const sz = gate(sizeDir);
+const rows = sz.report || [];
+const tooBig = rows.find((x) => x.name === 'toobig');
+const right = rows.find((x) => x.name === 'right');
+const firedOnWrong = !!tooBig && tooBig.problems.some((p) => p.includes('expected 4m'));
+const quietOnRight = !!right && right.ok;
+console.log('');
+console.log(`${firedOnWrong ? 'caught  ' : 'MISSED  '}${'expected size'.padEnd(16)} a 1m object declared 4m tall`);
+if (!firedOnWrong) bad++;
+console.log(`${quietOnRight ? 'quiet   ' : 'MISSED  '}${'expected size'.padEnd(16)} the same object declared correctly`);
+if (!quietOnRight) bad++;
+fs.rmSync(sizeDir, { recursive: true, force: true });
 
 console.log(bad ? `\n${bad} check(s) did not fire. The gate is not protecting you.`
                 : '\nevery check fired. the gate works.');

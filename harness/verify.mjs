@@ -35,24 +35,36 @@ try {
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-if (!process.argv[2]) {
-  console.error('usage: node harness/verify.mjs <dir-of-asset-modules>');
+const argv = process.argv.slice(2);
+const sizeArg = argv.find((a) => a.startsWith('--size='));
+// The whole method rests on choosing by eye and this used to render at 320px and
+// give you no way to change it, at which point a control knob is six pixels.
+// Several people wrote their own renderer to see what they were choosing between.
+const VIEW_PX = Math.max(160, Math.min(1024, +(sizeArg ? sizeArg.split('=')[1] : 0) || 320));
+const target = argv.find((a) => !a.startsWith('--'));
+if (!target) {
+  console.error('usage: node harness/verify.mjs <dir-of-asset-modules> [--size=560]');
   process.exit(1);
 }
-const dir = path.resolve(process.argv[2]);
+const dir = path.resolve(target);
 if (!fs.existsSync(dir)) {
   console.error(`no such directory: ${dir}`);
   process.exit(1);
 }
 const outDir = path.join(dir, '_verify');
 
-// An asset can declare that a face of it is meant to be blank, because it mounts
-// against something. Without this the blank-side check, which is the most
-// valuable thing in here, cries wolf on every wall lamp and awning, and a
-// newcomer learns to ignore warnings.
+// An asset can declare that a face of it is legitimately flat: because it mounts
+// against something, or because the face IS a flat thing, like the panel of a
+// chalkboard or a sign. Without this the blank-side check, which is the most
+// valuable thing in here, cries wolf on every wall lamp, awning and sandwich
+// board, and a newcomer learns to ignore warnings.
 //
 //   const g = new THREE.Group();
-//   g.userData.mounts = 'back';     // 'back' | 'front' | 'left' | 'right' | 'none'
+//   g.userData.mounts = 'back';     // 'back' | 'front' | 'left' | 'right', or an array
+//
+// Every exemption is printed on the asset's line in the report, so a set that
+// has quietly opted out of the check everywhere is visible at a glance rather
+// than hidden in the source of twenty modules.
 //
 const LIMITS = {
   minTris: 150,        // below this it is a placeholder, not an asset
@@ -62,6 +74,8 @@ const LIMITS = {
   groundTol: 0.02,     // fraction of height the base may sit off y=0
   centreTol: 0.05,     // fraction of footprint the centre may sit off x/z zero
   sideRatio: 0.35,     // a side with less than this share of the busiest side's detail is unmodelled
+  sideMinCoverage: 0.25, // ...but only judge a side that is at least this share of the busiest silhouette
+  sizeTol: 0.25,       // fraction a measured dimension may differ from a stated one
 };
 
 // --- a static server, because ES modules will not import from file:// ---------
@@ -131,9 +145,9 @@ for (const f of files) {
 
   // 2. does it load, and what does it look like from every side
   const page = await browser.newPage();
-  await page.setViewport({ width: 320 * 4, height: 320, deviceScaleFactor: 1 });
+  await page.setViewport({ width: VIEW_PX * 5, height: VIEW_PX, deviceScaleFactor: 1 });
   const rel = TARGET_PREFIX + f;
-  await page.goto(`${BASE}/harness/render.html?src=${encodeURIComponent(rel)}&size=320`,
+  await page.goto(`${BASE}/harness/render.html?src=${encodeURIComponent(rel)}&size=${VIEW_PX}`,
     { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction('window.__DONE__', { timeout: 90000 }).catch(() => {});
   const info = await page.evaluate(() => window.__INFO__ || { ok: false, error: 'never finished' });
@@ -148,6 +162,28 @@ for (const f of files) {
 
   // 3. is it a sane object
   const [w, h, d] = info.size;
+  // Every brief states a real-world size and until now the gate had no way to be
+  // told it, so its only size test was "between 5cm and 300m". A facade came back
+  // at 9.4m against a 6m brief and passed clean. Drop a <name>.expect.json next to
+  // the asset with any of { width, height, depth, tolerance } in metres.
+  const expectPath = path.join(dir, `${name}.expect.json`);
+  if (fs.existsSync(expectPath)) {
+    let want = null;
+    try { want = JSON.parse(fs.readFileSync(expectPath, 'utf8')); }
+    catch (e) { problems.push(`${name}.expect.json does not parse: ${e.message}`); }
+    if (want) {
+      const tol = Number.isFinite(want.tolerance) ? want.tolerance : LIMITS.sizeTol;
+      for (const [axis, got] of [['width', w], ['height', h], ['depth', d]]) {
+        const exp = want[axis];
+        if (!Number.isFinite(exp) || exp <= 0) continue;
+        const off = Math.abs(got - exp) / exp;
+        if (off > tol) {
+          problems.push(`${axis} ${got}m against an expected ${exp}m, ` +
+                        `${Math.round(off * 100)}% out`);
+        }
+      }
+    }
+  }
   if (info.tris < LIMITS.minTris) problems.push(`only ${info.tris} triangles, too crude to be finished`);
   if (info.tris > LIMITS.maxTris) problems.push(`${info.tris} triangles, far heavier than it needs to be`);
   const big = Math.max(w, h, d);
@@ -175,12 +211,22 @@ for (const f of files) {
       .map((m) => m.toLowerCase().trim())
       .filter((m) => m !== 'none'),
   );
+  //
+  // A view you can barely see is not evidence either way. An A-frame board or a
+  // thin sign shows a sliver from the side whose detail cannot be compared with
+  // a face pointing at the camera, and comparing them anyway reported the one
+  // fully modelled face as the unmodelled one. Judge a side only when there is
+  // enough of it on screen to judge.
   const sides = Object.entries(info.sides);
-  const busiest = Math.max(...sides.map(([, s]) => s.edgeDensity));
-  for (const [side, s] of sides) {
+  const widest = Math.max(...sides.map(([, s]) => s.coverage));
+  const judged = sides.filter(([, s]) => s.coverage >= LIMITS.sideMinCoverage * widest);
+  const busiest = Math.max(...judged.map(([, s]) => s.edgeDensity));
+  for (const [side, s] of judged) {
     if (!mounted.has(side) && busiest > 0 && s.edgeDensity < LIMITS.sideRatio * busiest) {
       problems.push(`${side} face is nearly featureless next to the others, it was probably never modelled`);
     }
+  }
+  for (const [side, s] of sides) {
     if (s.coverage < 0.005) problems.push(`${side} face is empty`);
   }
 
@@ -190,7 +236,8 @@ for (const f of files) {
   // gate reported everything clean while printing warnings.
   results.push({ ...info, name, ok, problems });
   const tag = ok ? 'ok  ' : 'WARN';
-  console.log(`${tag}  ${name.padEnd(22)} ${String(info.tris).padStart(6)} tris  ${info.meshes} meshes  ${w}x${h}x${d}m`);
+  const exempt = mounted.size ? `  [flat by declaration: ${[...mounted].join(', ')}]` : '';
+  console.log(`${tag}  ${name.padEnd(22)} ${String(info.tris).padStart(6)} tris  ${info.meshes} meshes  ${w}x${h}x${d}m${exempt}`);
   for (const p of problems) console.log(`        ${p}`);
 }
 
@@ -204,16 +251,16 @@ const sheetHtml = `<!doctype html><meta charset="utf-8">
  .n{font-size:15px;color:#eee}
  .s{color:#8fa}
  .b{color:#f88}
- img{width:1280px;display:block;border-radius:3px}
+ img{width:100%;max-width:1600px;display:block;border-radius:3px}
 </style>
-<div style="padding:10px 10px 0"><b>front &nbsp; right &nbsp; back &nbsp; left</b> &nbsp; each asset, four sides, same camera and light</div>
+<div style="padding:10px 10px 0"><b>front &nbsp; right &nbsp; back &nbsp; left &nbsp; three-quarter</b> &nbsp; each asset, same camera and light. The fifth view is not measured, it is there to be looked at.</div>
 ${rows.map((r) => `<div class="r"><div class="h"><span class="n">${r.name}</span>
   <span class="${r.ok ? 's' : 'b'}">${r.ok ? 'ok' : r.problems.join(' | ')}</span>
   <span style="color:#888">${r.tris ?? '?'} tris, ${r.meshes ?? '?'} meshes</span></div>
   <img src="${TARGET_PREFIX}_verify/${r.name}.png"></div>`).join('\n')}`;
 fs.writeFileSync(path.join(outDir, 'sheet.html'), sheetHtml);
 const sp = await browser.newPage();
-await sp.setViewport({ width: 1320, height: 900 });
+await sp.setViewport({ width: Math.min(1640, VIEW_PX * 5 + 40), height: 900 });
 await sp.goto(`${BASE}${TARGET_PREFIX}_verify/sheet.html`,
   { waitUntil: 'networkidle0', timeout: 60000 });
 await sp.screenshot({ path: path.join(outDir, 'sheet.png'), fullPage: true });

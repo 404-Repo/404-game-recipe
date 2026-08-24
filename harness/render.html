@@ -31,10 +31,17 @@ import * as THREE from 'three';
 const q = new URLSearchParams(location.search);
 const src = q.get('src');
 const size = +(q.get('size') || 320);
+// Four axis-aligned views to compare, plus one three-quarter view to LOOK at.
+// A recessed shopfront, a reveal or any opening cut into a wall reads as a flat
+// rectangle from dead ahead and only shows itself at an angle, which is also the
+// angle a game will actually show it from. The fifth view is excluded from the
+// side comparison below; it is there for your eyes, not for the metric.
 const VIEWS = ['front', 'right', 'back', 'left'];
+const EXTRA_VIEW = 'three-quarter';
+const ALL_VIEWS = [...VIEWS, EXTRA_VIEW];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setSize(size * VIEWS.length, size, false);
+renderer.setSize(size * ALL_VIEWS.length, size, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
@@ -57,17 +64,30 @@ function measure(ctx, x0, w, h) {
   const d = ctx.getImageData(x0, 0, w, h).data;
   const bg = [(BG >> 16) & 255, (BG >> 8) & 255, BG & 255];
   const lum = new Float32Array(w * h);
+  const on = new Uint8Array(w * h);
   let filled = 0;
   for (let i = 0; i < w * h; i++) {
     const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
     lum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
-    if (Math.abs(r - bg[0]) + Math.abs(g - bg[1]) + Math.abs(b - bg[2]) > 18) filled++;
+    if (Math.abs(r - bg[0]) + Math.abs(g - bg[1]) + Math.abs(b - bg[2]) > 18) { on[i] = 1; filled++; }
   }
+  // INTERIOR edges only: both pixels of the pair have to be on the object.
+  //
+  // Counting a pixel against the background as an edge measures the silhouette,
+  // not the modelling, and it wrecks the comparison for anything thin. Seen
+  // edge-on, a 30mm sign board is a sliver in which almost every pixel touches
+  // the background, so it scored 0.6 while its fully modelled front scored 0.14
+  // and the gate reported the front as the unmodelled face. One asset here was
+  // "fixed" by painting its back the same colour as its frame, which removed a
+  // stripe from the sliver and satisfied the metric by making the object
+  // marginally plainer. That is a sign the measurement was wrong, not the asset.
   let edges = 0;
   for (let y = 1; y < h; y++) {
     for (let x = 1; x < w; x++) {
       const i = y * w + x;
-      if (Math.abs(lum[i] - lum[i - 1]) > 8 || Math.abs(lum[i] - lum[i - w]) > 8) edges++;
+      if (!on[i]) continue;
+      if (on[i - 1] && Math.abs(lum[i] - lum[i - 1]) > 8) { edges++; continue; }
+      if (on[i - w] && Math.abs(lum[i] - lum[i - w]) > 8) edges++;
     }
   }
   return {
@@ -131,13 +151,16 @@ try {
   const ELEV = 0.43;                                 // radians, about 25 degrees
   const radius = 0.5 * Math.hypot(dim.x, dim.y, dim.z);
   const dist = (radius / Math.sin((FOV / 2) * (Math.PI / 180))) * 1.05;
-  VIEWS.forEach((_, i) => {
-    const a = (i * Math.PI) / 2;
+  ALL_VIEWS.forEach((name, i) => {
+    // The fifth is offset half a quadrant and lifted, so it sees two faces and
+    // the top at once.
+    const a = name === EXTRA_VIEW ? Math.PI / 4 : (i * Math.PI) / 2;
+    const elev = name === EXTRA_VIEW ? 0.62 : ELEV;
     const cam = new THREE.PerspectiveCamera(FOV, 1, dist * 0.01, dist * 10);
     cam.position.set(
-      ctr.x + Math.sin(a) * dist * Math.cos(ELEV),
-      ctr.y + dist * Math.sin(ELEV),
-      ctr.z + Math.cos(a) * dist * Math.cos(ELEV),
+      ctr.x + Math.sin(a) * dist * Math.cos(elev),
+      ctr.y + dist * Math.sin(elev),
+      ctr.z + Math.cos(a) * dist * Math.cos(elev),
     );
     cam.lookAt(ctr);
     renderer.setViewport(i * size, 0, size, size);
@@ -152,7 +175,7 @@ try {
   c2.height = renderer.domElement.height;
   const ctx = c2.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(renderer.domElement, 0, 0);
-  const px = renderer.domElement.width / VIEWS.length;
+  const px = renderer.domElement.width / ALL_VIEWS.length;
   const sides = {};
   VIEWS.forEach((v, i) => { sides[v] = measure(ctx, i * px, px, renderer.domElement.height); });
 
