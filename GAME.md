@@ -149,3 +149,22 @@ in our runs it went four rounds unfixed while being correctly diagnosed every si
 
 [docs/traps.md](docs/traps.md) has the rest, and they are all the same kind: wrong output, no
 exception, no warning, and code that reads correctly.
+
+---
+
+## One limit of the format, so you meet it knowingly
+
+Assets here are code with no image files, which is what makes them small, diffable and editable.
+It also means **printed text cannot be done well**. Stencils on a crate, a shipping label, EXIT
+painted on a floor: text can only be geometry, and at frame scale a raised plate reads as a
+smudge.
+
+This is not a small cosmetic gap. A warehouse shooter built with this method was compared blind
+against real frames from the game it was imitating, and the property that separated the two sets
+with no errors, before any measurement was taken, was legible printed text on props. Everything
+else it lost on was downstream of that.
+
+Worth knowing because it is fixable in principle and nobody has done it: `harness/surfaces.js`
+already generates albedo, roughness and normal maps procedurally at load time from nothing but a
+seed and a material name, which is the same problem solved for colour. Until someone extends that
+to glyphs, budget for it, and choose subjects where signage is not doing the work.
