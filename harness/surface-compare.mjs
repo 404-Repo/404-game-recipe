@@ -52,7 +52,7 @@ const BASE = `http://127.0.0.1:${server.address().port}`;
 
 // Plain headless reaches the real GPU. Forcing swiftshader is what makes a
 // capture crawl, and it is easy to copy that flag in from somewhere else.
-const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
 let worst = 1;
 for (const [i, file] of targets.entries()) {
   const name = path.basename(file, '.js');

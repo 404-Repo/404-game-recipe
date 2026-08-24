@@ -9,6 +9,6 @@
     "serve": "node harness/serve.mjs"
   },
   "dependencies": {
-    "puppeteer": "^24.15.0"
+    "puppeteer": "^25.8.0"
   }
 }

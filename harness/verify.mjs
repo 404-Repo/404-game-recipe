@@ -100,7 +100,7 @@ if (!files.length) {
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({
-  headless: 'new',
+  headless: true,
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'],
 });
 

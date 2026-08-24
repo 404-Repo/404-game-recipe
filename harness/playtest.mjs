@@ -98,7 +98,7 @@ fs.mkdirSync(outDir, { recursive: true });
 // a headless box still works. Whether it ended up on software is detected
 // below, and the frame rate is captioned accordingly.
 const browser = await puppeteer.launch({
-  headless: 'new',
+  headless: true,
   args: ['--enable-unsafe-swiftshader', '--no-sandbox', '--window-size=1280,720'],
 });
 const page = await browser.newPage();
