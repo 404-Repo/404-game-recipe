@@ -41,6 +41,16 @@ something was allowed to fail it.
 > which one looks better. Do this in ThreeJS. /loop until it's utterly perfect. Fan out
 > sub-agents and ultracode.
 
+## Before you generate anything: lock the style
+
+Write [docs/style-lock.md](docs/style-lock.md) for your game. One style sentence, the palette as
+exact hex values, and real sizes for the common objects. Hand the identical file to every agent
+that generates anything.
+
+This is a ten minute step and it decides whether you get a set or a pile. Agents generating in
+parallel cannot see each other's work, so the file is the only thing they share. Twenty six
+objects made by nine agents that never met read as one game because of it.
+
 ## Every object in it comes from 404
 
 When the build needs a car, a building, a crate, anything: [404.md](404.md). A reference image,
@@ -62,7 +72,25 @@ opinions, not a verdict. Generate a few frames of what your game should look lik
 same time of day, at the quality you are aiming for, and compare against those. Source them the
 same way you source asset references — whatever image tool your agent has
 ([docs/concept-images.md](docs/concept-images.md)) — but as full scene frames, not cutout
-objects.
+objects. Photographs work, and for anything that exists in the world they are easier to find
+than object references are.
+
+**Then turn that image into claims you can fail a round on.** A critic holding a photograph still
+argues taste. Write down, before building, what is actually true of the reference, as statements
+a machine could check. From one set of night market photographs: the surround is nearly black and
+everything readable sits in a pool of light; there are always two colour temperatures in frame;
+the counter is loaded rather than tastefully arranged; the volume above the counter is full.
+
+Those four sentences did more for the result than any other single thing, because they turned
+"make it look better" into four things that could be measured and sent back.
+
+**Let the critic attack the measurement, not just the picture.** Whatever you measure, the build
+will start optimising it, and a bad statistic is worse than none because it certifies the
+failure. In one run a two-temperature statistic scored the build higher than the real photograph
+while the picture plainly failed by eye, and a floor test scored every input identically,
+including a flat unlit slab. Both were caught by a critic that was allowed to reject the metric
+instead of only the frame. Use a fresh critic each round; it is a better blind test than the same
+one twice.
 
 **Give every sub-agent its own scratch directory.** The prompt tells you to fan
 out, and agents working in parallel will pick the same obvious filename for a
@@ -80,8 +108,13 @@ its own critic because the critic was comparing stills.
 node harness/playtest.mjs <dir>
 ```
 
-plays the game and captures six frames while it moves. It drives forward, so it tests play; it
-cannot reach a menu, a death screen or a restart, and those stay yours to check. To drive it
+plays the game and captures six frames while it moves. **It drives forward**, so it tests a game
+you drive. It cannot reach a menu, a death screen or a restart, and those stay yours to check,
+and it cannot test a game that is tapped, dragged or turn-based at all. If yours is one of those,
+the principle still holds and the tool does not: write the equivalent for your own input, drive
+it with real pointer or touch events rather than by calling into the game, and capture frames
+while things are happening. A build here shipped unstartable on every phone for weeks because
+every check drove it through its debug hooks. To drive it
 yourself, `node harness/serve.mjs <same dir>` and open the URL it prints. Both take a directory
 anywhere on disk, and both expect `assets/` beside it, which is the layout every example here
 uses. For playtest to work, expose:

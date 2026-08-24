@@ -138,6 +138,41 @@ drawn, and a bake that fixes draw calls quietly costs you everything culling was
 
 ---
 
+## An ExtrudeGeometry bevel makes the object bigger than you drew it
+
+`bevelSize` does not round the edges of your profile. It grows the profile OUTWARD by that much
+on every in-plane side, and `bevelThickness` adds to the depth at both ends. Measured: a
+0.4 x 0.4 square extruded 0.2 deep with `bevelSize: 0.05` and `bevelThickness: 0.05` comes out
+**0.5 x 0.5 x 0.3**, sitting 0.05 below where the profile was drawn. Winding makes no difference.
+
+So every bevelled sweep is `2 x bevelSize` fatter and `2 x bevelThickness` deeper than intended,
+and hangs below its own base. The shape looks right, nothing warns, and the numbers are simply
+wrong. Since the method sends one candidate per object down the profile route, this reaches about
+a third of everything generated this way.
+
+Either subtract the bevel from your profile, or measure the finished geometry and place from that
+rather than from what you drew.
+
+---
+
+## Merging is destructive, and one of the things it destroys is movement
+
+`ASSET()` merges by material as it loads. That is correct for scenery and it is why a street of
+two hundred props is affordable. It also collapses the hierarchy and drops the asset's `userData`
+with the nodes that carried it, so an articulated figure arrives welded solid with no limbs to
+name. It renders perfectly. It never moves again.
+
+Pass `{ keepHierarchy: true }` for anything with moving parts. See
+[asset-contract.md](asset-contract.md).
+
+The same operation used to switch off every shadow it touched, because a merged mesh is a new
+mesh and `castShadow` defaults to false, so baking a dressed scene left nothing attached to the
+ground. That one is fixed: the flags are carried across now. It is recorded here because the
+class of bug is the point, not the instance. A function that returns a new object returns new
+defaults with it.
+
+---
+
 ## Absolute asset paths break on a project subpath
 
 If you deploy to GitHub Pages under `/<repo>/`, an absolute path like `/assets/car.js` resolves
