@@ -4,10 +4,10 @@
  *
  *   node harness/playtest.mjs <dir-containing-the-game's-index.html>
  *
- * The directory is given relative to the repo root, because that is what gets
- * served. It drives forward and photographs the result, which means it tests
- * play. It cannot reach a menu, a death screen or a restart, so those stay
- * yours to check.
+ * The directory can be anywhere: relative, absolute, inside this repo or not.
+ * It drives forward and photographs the result, which means it tests play. It
+ * cannot reach a menu, a death screen or a restart, so those stay yours to
+ * check.
  *
  * Two habits are baked in here because skipping either one wasted days.
  *
@@ -33,20 +33,43 @@ if (!process.argv[2]) {
   console.error("usage: node harness/playtest.mjs <dir-containing-the-game's-index.html>");
   process.exit(1);
 }
-const target = process.argv[2].replace(/^\/+|\/+$/g, '');
-if (!fs.existsSync(path.join(ROOT, target, 'index.html'))) {
-  console.error(`no index.html in ${path.join(ROOT, target)}`);
+// Resolve against the working directory, not the repo root. Joining an absolute
+// path onto ROOT produced /repo/Users/you/game and an error message naming a
+// path that never existed; a ../game outside the tree got as far as loading and
+// then failed as "game never signalled __READY__", which reads as a bug in the
+// game rather than a directory the server would not serve.
+const target = path.resolve(process.argv[2]);
+if (!fs.existsSync(path.join(target, 'index.html'))) {
+  console.error(`no index.html in ${target}`);
   process.exit(1);
 }
-const outDir = path.join(ROOT, target, '_playtest');
+const outDir = path.join(target, '_playtest');
+const label = path.relative(process.cwd(), target) || target;
 
+// TWO roots. The game is mounted under a prefix so it can live anywhere, and
+// the repo root stays at / so a game's ../harness/assetlib.js still resolves.
+const GAME_PREFIX = '/__game__/';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
                '.png': 'image/png', '.json': 'application/json', '.css': 'text/css' };
+
+function resolveRequest(urlPath) {
+  if (urlPath.startsWith(GAME_PREFIX)) {
+    const file = path.join(target, urlPath.slice(GAME_PREFIX.length));
+    return file.startsWith(target) ? file : null;
+  }
+  const file = path.join(ROOT, urlPath);
+  return file.startsWith(ROOT) ? file : null;
+}
+
 const server = createServer((req, res) => {
   let rel = decodeURIComponent(req.url.split('?')[0]);
   if (rel.endsWith('/')) rel += 'index.html';
-  const file = path.join(ROOT, rel);
-  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  // The browser asks for this on its own. Letting it 404 puts a console error in
+  // every run, and console errors fail the gate, so a game with no favicon was
+  // reported as broken for a file it never asked for.
+  if (rel === '/favicon.ico') { res.writeHead(204); return res.end(); }
+  const file = resolveRequest(rel);
+  if (!file || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('not found');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
@@ -75,8 +98,8 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e.message).slice(0, 200)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 200)); });
 
-console.log(`loading ${target} …`);
-await page.goto(`${BASE}/${target}/`, { waitUntil: 'load', timeout: 90000 });
+console.log(`loading ${label} …`);
+await page.goto(`${BASE}${GAME_PREFIX}`, { waitUntil: 'load', timeout: 90000 });
 await page.waitForFunction('window.__READY__ === true', { timeout: 180000 })
   .catch(() => { throw new Error('game never signalled __READY__'); });
 software = await page.evaluate(() => {
@@ -149,11 +172,11 @@ const minFps = fpsVals.length ? Math.min(...fpsVals) : 0;
 const sheet = `<!doctype html><meta charset="utf-8">
 <style>body{margin:0;background:#111;display:grid;grid-template-columns:1fr 1fr;gap:4px}
 img{width:100%;display:block}</style>
-${frames.map((f) => `<img src="/${path.relative(ROOT, f).split(path.sep).join('/')}">`).join('')}`;
+${frames.map((f) => `<img src="${GAME_PREFIX}_playtest/${path.basename(f)}">`).join('')}`;
 fs.writeFileSync(path.join(outDir, 'strip.html'), sheet);
 const sp = await browser.newPage();
 await sp.setViewport({ width: 1300, height: 900 });
-await sp.goto(`${BASE}/${path.relative(ROOT, path.join(outDir, 'strip.html')).split(path.sep).join('/')}`,
+await sp.goto(`${BASE}${GAME_PREFIX}_playtest/strip.html`,
   { waitUntil: 'networkidle0' });
 await sp.screenshot({ path: path.join(outDir, 'filmstrip.png'), fullPage: true });
 await sp.close();

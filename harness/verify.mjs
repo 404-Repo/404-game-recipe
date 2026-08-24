@@ -55,19 +55,34 @@ const LIMITS = {
 };
 
 // --- a static server, because ES modules will not import from file:// ---------
+//
+// TWO roots, and the second one is the whole point. Serving only the repo root
+// means an asset directory anywhere outside the tree gets a module URL full of
+// ../.. that the server refuses, and every asset in it fails with "Failed to
+// fetch dynamically imported module". That reads as a broken asset. It is not:
+// the same files pass from inside the tree and fail from outside it, so the
+// gate reports a perfect pack as entirely broken and points the blame at the
+// generator. Mount the target under a prefix and the location stops mattering.
+//
+// Paths that climb above the target resolve against the repo root, which is
+// what a game's ../harness/assetlib.js expects.
+const TARGET_PREFIX = '/__target__/';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
                '.png': 'image/png', '.json': 'application/json', '.css': 'text/css' };
-// Assets are commonly kept outside this repo, in the project being built, so the
-// target directory is mounted at /@assets alongside the repo itself. Serving only
-// from ROOT meant an external directory failed every module with "Failed to fetch
-// dynamically imported module", which points at nothing.
+
+function resolveRequest(urlPath) {
+  if (urlPath.startsWith(TARGET_PREFIX)) {
+    const file = path.join(dir, urlPath.slice(TARGET_PREFIX.length));
+    return file.startsWith(dir) ? file : null;
+  }
+  const file = path.join(ROOT, urlPath);
+  return file.startsWith(ROOT) ? file : null;
+}
+
 const server = createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
-  const file = rel.startsWith('/@assets/')
-    ? path.join(dir, rel.slice('/@assets/'.length))
-    : path.join(ROOT, rel);
-  const base = rel.startsWith('/@assets/') ? dir : ROOT;
-  if (!file.startsWith(base) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  const file = resolveRequest(rel);
+  if (!file || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); return res.end('not found');
   }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
@@ -107,7 +122,7 @@ for (const f of files) {
   // 2. does it load, and what does it look like from every side
   const page = await browser.newPage();
   await page.setViewport({ width: 320 * 4, height: 320, deviceScaleFactor: 1 });
-  const rel = '/@assets/' + path.relative(dir, abs).split(path.sep).join('/');
+  const rel = TARGET_PREFIX + f;
   await page.goto(`${BASE}/harness/render.html?src=${encodeURIComponent(rel)}&size=320`,
     { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction('window.__DONE__', { timeout: 90000 }).catch(() => {});
@@ -153,12 +168,9 @@ for (const f of files) {
   const sides = Object.entries(info.sides);
   const busiest = Math.max(...sides.map(([, s]) => s.edgeDensity));
   for (const [side, s] of sides) {
-    if (mounted.has(side)) continue;
-    if (busiest > 0 && s.edgeDensity < LIMITS.sideRatio * busiest) {
+    if (!mounted.has(side) && busiest > 0 && s.edgeDensity < LIMITS.sideRatio * busiest) {
       problems.push(`${side} face is nearly featureless next to the others, it was probably never modelled`);
     }
-  }
-  for (const [side, s] of sides) {
     if (s.coverage < 0.005) problems.push(`${side} face is empty`);
   }
 
@@ -188,11 +200,11 @@ const sheetHtml = `<!doctype html><meta charset="utf-8">
 ${rows.map((r) => `<div class="r"><div class="h"><span class="n">${r.name}</span>
   <span class="${r.ok ? 's' : 'b'}">${r.ok ? 'ok' : r.problems.join(' | ')}</span>
   <span style="color:#888">${r.tris ?? '?'} tris, ${r.meshes ?? '?'} meshes</span></div>
-  <img src="/@assets/${path.relative(dir, path.join(outDir, r.name + '.png')).split(path.sep).join('/')}"></div>`).join('\n')}`;
+  <img src="${TARGET_PREFIX}_verify/${r.name}.png"></div>`).join('\n')}`;
 fs.writeFileSync(path.join(outDir, 'sheet.html'), sheetHtml);
 const sp = await browser.newPage();
 await sp.setViewport({ width: 1320, height: 900 });
-await sp.goto(`${BASE}/@assets/${path.relative(dir, path.join(outDir, 'sheet.html')).split(path.sep).join('/')}`,
+await sp.goto(`${BASE}${TARGET_PREFIX}_verify/sheet.html`,
   { waitUntil: 'networkidle0', timeout: 60000 });
 await sp.screenshot({ path: path.join(outDir, 'sheet.png'), fullPage: true });
 await sp.close();

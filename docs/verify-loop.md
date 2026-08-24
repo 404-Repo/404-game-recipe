@@ -101,5 +101,13 @@ Runs the verifier against fixtures that are broken in known ways, a building bla
 sides, a crate floating off the ground, a shrub costing 436,000 triangles, and asserts each one
 is caught.
 
+It then runs the verifier on a **correct** asset from a directory **outside this repo**, and
+asserts it passes. That half is there because a gate can be wrong in both directions. The
+verifier used to serve only the repo root, so an asset directory anywhere else produced a module
+URL the server refused and every asset in it failed with "Failed to fetch dynamically imported
+module". The files were fine. A gate that calls a good pack broken, in the vocabulary of a
+broken asset, sends you off to fix a generator that was never wrong, and nothing catches it
+unless something explicitly checks that good input still passes.
+
 Run it once after cloning. A check nobody has seen fail is not a check, and a gate that passes
 everything is worse than no gate, because it hands you confidence you have not earned.
