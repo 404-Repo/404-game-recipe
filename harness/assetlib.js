@@ -124,8 +124,16 @@ function mergeByMaterialValues(root) {
       const sig = Object.keys(o.geometry.attributes).sort().join(',') +
         (o.isInstancedMesh && o.instanceColor ? ',color' : '');
       const k = materialKey(mats[0]) + '#' + sig;
-      if (!buckets.has(k)) buckets.set(k, { mat: mats[0], geos: [] });
+      if (!buckets.has(k)) buckets.set(k, { mat: mats[0], geos: [], cast: false, receive: false });
       const bucket = buckets.get(k);
+      // Carry the shadow flags across the merge. A merged mesh is a NEW mesh and
+      // castShadow defaults to false, so without this the merge silently switches
+      // off every shadow its inputs had. Nothing throws, the scene still renders,
+      // and nothing in it is attached to the ground any more. bakeStatic runs
+      // over a whole dressed scene, which is exactly where it is most expensive
+      // and hardest to spot.
+      bucket.cast = bucket.cast || o.castShadow;
+      bucket.receive = bucket.receive || o.receiveShadow;
 
       if (o.isInstancedMesh) { expandInstances(o, bucket); return; }
 
@@ -138,7 +146,8 @@ function mergeByMaterialValues(root) {
   });
 
   const out = new THREE.Group();
-  for (const { mat, geos } of buckets.values()) {
+  const shadowed = (m, cast, receive) => { m.castShadow = cast; m.receiveShadow = receive; return m; };
+  for (const { mat, geos, cast, receive } of buckets.values()) {
     if (!geos.length) continue;
     let geo = geos.length === 1 ? geos[0] : null;
     if (!geo) {
@@ -149,11 +158,11 @@ function mergeByMaterialValues(root) {
       if (!geo) {
         // Merging is an optimisation, never a correctness requirement. If these
         // still will not combine, draw them separately rather than lose them.
-        for (const g of geos) out.add(new THREE.Mesh(g, mat));
+        for (const g of geos) out.add(shadowed(new THREE.Mesh(g, mat), cast, receive));
         continue;
       }
     }
-    out.add(new THREE.Mesh(geo, mat));
+    out.add(shadowed(new THREE.Mesh(geo, mat), cast, receive));
   }
   for (const o of skip) {
     const c = o.clone();
@@ -164,13 +173,19 @@ function mergeByMaterialValues(root) {
   return out;
 }
 
-async function loadPrototype(url) {
-  if (cache.has(url)) return cache.get(url);
+async function loadPrototype(url, keepHierarchy = false) {
+  const key = keepHierarchy ? url + '#tree' : url;
+  if (cache.has(key)) return cache.get(key);
   const p = (async () => {
     const mod = await import(/* @vite-ignore */ new URL(url, location.href).href);
     const fn = mod.default || mod.build || mod.create;
     if (typeof fn !== 'function') throw new Error(`asset has no default export function: ${url}`);
-    const merged = mergeByMaterialValues(fn(THREE));
+    const built = fn(THREE);
+    // Merging is what keeps the draw calls down and it is right for scenery. It
+    // is also destructive: it collapses the hierarchy and drops everything the
+    // asset attached to userData, so anything with moving parts arrives welded
+    // solid, renders perfectly, and can never move. See keepHierarchy below.
+    const merged = keepHierarchy ? built : mergeByMaterialValues(built);
     // Normalise so a placement coordinate means "put it here on the ground"
     // rather than "put its arbitrary origin here".
     const box = new THREE.Box3().setFromObject(merged);
@@ -179,28 +194,109 @@ async function loadPrototype(url) {
     const wrapper = new THREE.Group();
     wrapper.add(merged);
     wrapper.userData.nativeSize = box.getSize(new THREE.Vector3());
+    if (keepHierarchy) carryDeclarations(built, wrapper);
     return wrapper;
   })();
-  cache.set(url, p);
+  cache.set(key, p);
   return p;
 }
 
 /**
- * ASSET(url, {height, surfaces}) -> a fresh Object3D you can position and rotate.
+ * An asset that moves names its moving parts on `userData`, as objects:
+ *
+ *   g.userData.joints = { leftUpperLeg, rightUpperLeg, head };
+ *
+ * Those references cannot survive a clone. `Object3D.copy` round-trips userData
+ * through JSON, so a cloned instance's `userData.joints.head` is a plain object
+ * with no methods, and code that rotates it changes nothing and throws nothing.
+ * Copying the references onto the prototype and hoping is worse than dropping
+ * them, because it looks like it worked.
+ *
+ * So the prototype records NAMES, and every instance resolves them against its
+ * own tree. Parts without a name are given one, since most authors do not set it.
+ */
+const REF_PREFIX = '__part__';
+
+function carryDeclarations(src, wrapper) {
+  const refs = {};
+  for (const [key, val] of Object.entries(src.userData || {})) {
+    if (key === 'nativeSize') continue;
+    if (val && val.isObject3D) {
+      if (!val.name) val.name = `${REF_PREFIX}${key}`;
+      refs[key] = val.name;
+    } else if (val && typeof val === 'object' && !Array.isArray(val) &&
+               Object.values(val).some((v) => v && v.isObject3D)) {
+      const map = {};
+      for (const [sub, node] of Object.entries(val)) {
+        if (!node || !node.isObject3D) continue;
+        if (!node.name) node.name = `${REF_PREFIX}${key}_${sub}`;
+        map[sub] = node.name;
+      }
+      refs[key] = map;
+    } else {
+      wrapper.userData[key] = val;      // plain data survives a clone unharmed
+    }
+  }
+  if (Object.keys(refs).length) wrapper.userData[REF_PREFIX] = refs;
+}
+
+/** Rebuild the declared references against THIS instance's own nodes. */
+function resolveDeclarations(inst) {
+  const refs = inst.userData && inst.userData[REF_PREFIX];
+  if (!refs) return;
+  const byName = new Map();
+  inst.traverse((o) => { if (o.name) byName.set(o.name, o); });
+  for (const [key, val] of Object.entries(refs)) {
+    if (typeof val === 'string') {
+      const node = byName.get(val);
+      if (node) inst.userData[key] = node;
+    } else {
+      const out = {};
+      for (const [sub, name] of Object.entries(val)) {
+        const node = byName.get(name);
+        if (node) out[sub] = node;
+      }
+      if (Object.keys(out).length) inst.userData[key] = out;
+    }
+  }
+  delete inst.userData[REF_PREFIX];
+}
+
+/**
+ * ASSET(url, {height, surfaces, keepHierarchy}) -> a fresh Object3D you can
+ * position and rotate.
+ *
  * `height` is the finished height in metres; omit it to keep native scale.
  * `surfaces` applies procedural albedo, roughness and normal maps; see
  * docs/surfaces.md. Never throws into a game loop: an unloadable asset returns
  * an empty Group.
+ *
+ * `keepHierarchy: true` skips the merge. Use it for ANYTHING THAT MOVES.
+ *
+ * The default merge is what makes a two hundred prop street affordable, and it
+ * is the wrong thing for a character, a door, a wheel or a lid. It welds every
+ * part into one mesh per material and discards the asset's own userData with the
+ * nodes it was attached to, so a figure exposing named limbs arrives with no
+ * limbs to name. It renders perfectly. It simply never moves again, and no still
+ * frame will ever show you that, which is why this option exists and why it is
+ * documented here rather than in a footnote.
+ *
+ *   const crate  = await ASSET('assets/crate.js');                        // merged, cheap
+ *   const person = await ASSET('assets/person.js', { keepHierarchy: true }); // articulated
+ *
+ * With keepHierarchy the asset's userData is copied onto the returned wrapper,
+ * so `obj.userData.joints` works without knowing how the loader nested things.
  */
 export async function ASSET(url, opts = {}) {
   let proto;
   try {
-    proto = await loadPrototype(url);
+    proto = await loadPrototype(url, !!opts.keepHierarchy);
   } catch (e) {
     console.warn('[assets]', url, e.message);
     return new THREE.Group();
   }
   const inst = proto.clone(true);
+  if (opts.keepHierarchy) resolveDeclarations(inst);
   const native = proto.userData.nativeSize;
   if (opts.height && native && native.y > 1e-6) {
     inst.scale.setScalar(opts.height / native.y);
@@ -219,6 +315,11 @@ export async function preloadAssets(urls) {
 
 /**
  * bakeStatic(group) -> a new Group with the same appearance and far fewer draws.
+ *
+ * Shadow flags survive it. They did not always: a merged mesh is a new mesh and
+ * `castShadow` defaults to false, so baking a dressed scene used to switch off
+ * every shadow in it and leave nothing attached to the ground, with no error and
+ * no warning. Only a critic sampling pixels under a counter leg found it.
  *
  * Use it on scenery that never moves, in chunks rather than all at once: one
  * bake per city block keeps frustum culling working, whereas baking the entire
