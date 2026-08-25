@@ -14,12 +14,15 @@ it, which is not true of anything it fetches as a binary.
 weights are open. This repository is the whole method, free: how to make assets this way, and how
 to build a game out of them.
 
-![six frames from a driven run](docs/img/example-in-motion.png)
+![a warehouse loading dock, seen down the sights of a carbine](docs/img/hero.png)
 
-*A game built this way, captured in motion by `harness/playtest.mjs` from this repo. It went from
-an empty directory to this in about four hours unattended: 73 reference images, 194 candidate
-meshes, 36 assets kept. Every building, vehicle and prop was generated from a reference image.
-Nothing is hand-modelled and nothing is textured from a file.*
+*A game built this way. Every object in that frame was generated as code: the racking, the
+pallets, the totes, the catwalk and its lamps, the forklift, the soldier, the carbine in your
+hands. 33 reference images, 99 candidate modules written, 33 kept. Nothing is hand-modelled,
+nothing is downloaded, and there is not one image file in the finished game.*
+
+**[Play it](https://ben-atlas.github.io/warehouse-fps/)**. It is in this repo too, under
+[`example/warehouse-fps`](example/), at 708 KB, and it runs from a served folder with no build step.
 
 ```
 Read GAME.md in this repo and build me a game about <anything>.
@@ -59,11 +62,13 @@ foreshortened its base. Neither is a syntax error. Neither survives being looked
 
 **[→ 404.md](404.md)**
 
-![ten assets, four sides each](docs/img/verify-sheet.png)
+![assets, five views each](docs/img/verify-sheet.png)
 
-*What `harness/verify.mjs` writes. The check that earns its place is the fourth column: an object
+*What `harness/verify.mjs` writes. The check that earns its place is the third column: an object
 modelled only from the angle its reference showed is a featureless box from behind, and every
-screenshot hides it because every screenshot is taken from the good side.*
+screenshot hides it because every screenshot is taken from the good side. The fifth column is not
+measured and is there to be looked at, because a recess or an opening reads as a flat rectangle
+from dead ahead and only shows itself at an angle.*
 
 ## 2. The game
 

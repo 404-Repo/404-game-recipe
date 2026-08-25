@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>DEPOT 17</title>
+<!-- The one and only network dependency. Pinned to the version the verifier renders with;
+     three/addons paths have moved between releases. -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<link rel="icon" href="data:,">
+<style>
+  :root { --amber:#ffb45a; --cold:#8fb4d8; --red:#d8342a; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; padding:0; height:100%; overflow:hidden; background:#000;
+              font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color:#e8e4dc; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  #ui { position:fixed; inset:0; pointer-events:none; z-index:10; }
+  .pe { pointer-events:auto; }
+
+  /* ---- loading ---- */
+  #load { position:fixed; inset:0; z-index:40; background:#0a0b0c; display:flex;
+          flex-direction:column; align-items:center; justify-content:center; gap:18px; }
+  #load h1 { margin:0; font-size:clamp(28px,7vw,56px); letter-spacing:.34em; font-weight:400;
+             color:#d8d2c6; text-indent:.34em; }
+  #load .sub { font-size:12px; letter-spacing:.28em; color:#6d7278; text-indent:.28em; }
+  #bar { width:min(360px,64vw); height:2px; background:#23262a; overflow:hidden; }
+  #barf { height:100%; width:0%; background:var(--amber); transition:width .18s linear; }
+  #loadmsg { font-size:11px; color:#585d63; letter-spacing:.1em; height:14px; }
+
+  /* ---- menus ---- */
+  .screen { position:fixed; inset:0; z-index:35; display:none; flex-direction:column;
+            align-items:center; justify-content:center; gap:22px; text-align:center;
+            background:radial-gradient(ellipse at 50% 45%, rgba(12,13,15,.72), rgba(4,5,6,.94)); }
+  .screen.on { display:flex; }
+  .screen h2 { margin:0; font-size:clamp(24px,6vw,44px); letter-spacing:.3em; font-weight:400; text-indent:.3em; }
+  .screen p { margin:0; font-size:13px; line-height:1.9; color:#8b9097; letter-spacing:.08em; max-width:min(560px,86vw); }
+  .btn { padding:14px 34px; border:1px solid #4a5057; background:rgba(20,22,25,.86); color:#e8e4dc;
+         font:inherit; font-size:13px; letter-spacing:.24em; text-indent:.24em; cursor:pointer; }
+  .btn:hover { border-color:var(--amber); color:var(--amber); }
+  kbd { border:1px solid #40454b; padding:1px 6px; border-radius:2px; color:#b9bec4; font-size:11px; }
+
+  /* ---- hud ---- */
+  #hud { position:fixed; inset:0; z-index:12; display:none; }
+  #hud.on { display:block; }
+  #cross { position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; }
+  #cross i { position:absolute; background:#e9e6df; box-shadow:0 0 3px rgba(0,0,0,.9); opacity:.86; }
+  #cross i.h { width:7px; height:1.5px; top:12.25px; } #cross i.l { left:0 } #cross i.r { right:0 }
+  #cross i.v { height:7px; width:1.5px; left:12.25px; } #cross i.t { top:0 } #cross i.b { bottom:0 }
+  #cross.hit i { background:var(--red); opacity:1; }
+  #hitmark { position:absolute; left:50%; top:50%; width:30px; height:30px; margin:-15px 0 0 -15px;
+             opacity:0; transform:rotate(45deg); }
+  #hitmark i { position:absolute; background:#fff; width:2px; height:9px; }
+  #hitmark i:nth-child(1){left:0;top:0} #hitmark i:nth-child(2){right:0;top:0}
+  #hitmark i:nth-child(3){left:0;bottom:0} #hitmark i:nth-child(4){right:0;bottom:0}
+
+  #ammo { position:absolute; right:max(22px,env(safe-area-inset-right)); bottom:max(20px,env(safe-area-inset-bottom));
+          text-align:right; text-shadow:0 2px 6px #000; }
+  #ammo .n { font-size:38px; letter-spacing:.05em; line-height:1; }
+  #ammo .n small { font-size:17px; color:#7d838a; }
+  #ammo .w { font-size:10px; letter-spacing:.26em; color:#8b9097; margin-top:5px; }
+  #ammo.low .n { color:var(--red); }
+
+  #vitals { position:absolute; left:max(22px,env(safe-area-inset-left)); bottom:max(20px,env(safe-area-inset-bottom));
+            text-shadow:0 2px 6px #000; }
+  #hpbar { width:170px; height:4px; background:rgba(255,255,255,.14); margin-top:6px; }
+  #hpfill { height:100%; width:100%; background:#cfd4d8; transition:width .12s; }
+  #vitals .lab { font-size:10px; letter-spacing:.26em; color:#8b9097; }
+
+  #obj { position:absolute; left:0; right:0; top:max(18px,env(safe-area-inset-top)); text-align:center;
+         text-shadow:0 2px 6px #000; }
+  #obj .t { font-size:11px; letter-spacing:.3em; color:var(--amber); }
+  #obj .s { font-size:22px; letter-spacing:.08em; margin-top:3px; }
+  #obj .c { font-size:10px; letter-spacing:.22em; color:#8b9097; margin-top:3px; }
+
+  #dmg { position:fixed; inset:0; z-index:11; pointer-events:none; opacity:0;
+         background:radial-gradient(ellipse at center, rgba(140,0,0,0) 56%, rgba(150,10,10,.85) 100%); }
+  #flash { position:fixed; inset:0; z-index:11; pointer-events:none; opacity:0; background:#fff; }
+  #toast { position:absolute; left:0; right:0; top:38%; text-align:center; font-size:13px;
+           letter-spacing:.22em; color:var(--amber); opacity:0; text-shadow:0 2px 8px #000; }
+
+  /* ---- touch ---- */
+  #touch { position:fixed; inset:0; z-index:14; display:none; }
+  #touch.on { display:block; }
+  .tpad { position:absolute; }
+  #stick { left:0; bottom:0; width:44%; height:56%; }
+  #stickbase { position:absolute; width:112px; height:112px; margin:-56px 0 0 -56px; border-radius:50%;
+               border:1.5px solid rgba(232,228,220,.28); opacity:0; }
+  #sticknub { position:absolute; width:50px; height:50px; margin:-25px 0 0 -25px; border-radius:50%;
+              background:rgba(232,228,220,.2); border:1.5px solid rgba(232,228,220,.45); opacity:0; }
+  #look { right:0; top:0; width:56%; height:100%; }
+  .tbtn { position:absolute; border-radius:50%; border:1.5px solid rgba(232,228,220,.34);
+          background:rgba(16,18,20,.4); display:flex; align-items:center; justify-content:center;
+          font-size:10px; letter-spacing:.14em; color:#d6d2ca; user-select:none; }
+  .tbtn.dn { background:rgba(255,180,90,.3); border-color:var(--amber); }
+  #bfire { right:max(18px,env(safe-area-inset-right)); bottom:26%; width:96px; height:96px; font-size:12px; }
+  #bads  { right:max(122px,calc(env(safe-area-inset-right) + 122px)); bottom:20%; width:66px; height:66px; }
+  #brel  { right:max(24px,env(safe-area-inset-right)); bottom:12%; width:62px; height:62px; }
+  #bjump { left:max(20px,env(safe-area-inset-left)); bottom:26%; width:62px; height:62px; }
+  #bcrouch { left:max(94px,calc(env(safe-area-inset-left) + 94px)); bottom:15%; width:58px; height:58px; }
+  #bsprint { left:max(20px,env(safe-area-inset-left)); bottom:47%; width:58px; height:58px; }
+
+  #perf { position:absolute; right:max(16px,env(safe-area-inset-right)); top:max(14px,env(safe-area-inset-top));
+          font-size:10px; color:#6d7278; letter-spacing:.06em; text-align:right; line-height:1.6; display:none; }
+  #perf.on { display:block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="load">
+  <h1>DEPOT 17</h1>
+  <div class="sub">NIGHT OPERATION</div>
+  <div id="bar"><div id="barf"></div></div>
+  <div id="loadmsg">initialising</div>
+</div>
+
+<div id="ui">
+  <div id="hud">
+    <div id="cross"><i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i></div>
+    <div id="hitmark"><i></i><i></i><i></i><i></i></div>
+    <div id="obj"><div class="t">OBJECTIVE</div><div class="s" id="objs">SECURE THE DEPOT</div><div class="c" id="objc"></div></div>
+    <div id="vitals"><div class="lab">VITALS</div><div id="hpbar"><div id="hpfill"></div></div></div>
+    <div id="ammo"><div class="n"><span id="mag">30</span><small> / <span id="res">180</span></small></div><div class="w" id="wname">M4 CARBINE</div></div>
+    <div id="toast"></div>
+    <div id="perf"></div>
+  </div>
+</div>
+
+<div id="dmg"></div>
+<div id="flash"></div>
+
+<div id="touch">
+  <div class="tpad pe" id="stick"><div id="stickbase"></div><div id="sticknub"></div></div>
+  <div class="tpad pe" id="look"></div>
+  <div class="tbtn pe" id="bfire">FIRE</div>
+  <div class="tbtn pe" id="bads">ADS</div>
+  <div class="tbtn pe" id="brel">RLD</div>
+  <div class="tbtn pe" id="bjump">JMP</div>
+  <div class="tbtn pe" id="bcrouch">CRCH</div>
+  <div class="tbtn pe" id="bsprint">RUN</div>
+</div>
+
+<div class="screen" id="start">
+  <h2>DEPOT 17</h2>
+  <p id="startp"></p>
+  <button class="btn pe" id="startb">DEPLOY</button>
+</div>
+
+<div class="screen" id="over">
+  <h2 id="overh">MISSION FAILED</h2>
+  <p id="overp"></p>
+  <button class="btn pe" id="overb">REDEPLOY</button>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
