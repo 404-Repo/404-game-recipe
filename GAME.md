@@ -140,6 +140,34 @@ fast one. Both then report that the player would not move, about a game that is 
 
 ---
 
+## Knowing when to stop
+
+Nothing in this repo caps anything. There is no retry limit, no round limit and no spend limit,
+and that is deliberate, but it means the stopping rule is yours and you should decide it before
+you are tired.
+
+**Decide how many rounds you are willing to run, before you start.** The prompt says loop until
+it is utterly perfect and do not stop until every sub-agent is wowed. That is what drives the
+quality and it is also a condition that can never be met, so the loop has no natural end. Pick a
+number, three or four is enough to see whether the work is converging, and decide now what
+happens when you reach it: ship what you have and write down what is still wrong. A round that
+produces a list rather than a change is the signal that you are done, not the signal to run
+another.
+
+**A critic that fails twice for the same reason is not asking for another round.** Rounds close
+gaps that are about execution. They do not close gaps that are about the format or the subject.
+In one run here a critic failed a build three rounds running, and the deciding property every
+time was legible printed text on props, which assets made of code with no image files cannot do
+at all. A fourth round would have spent real money to be told the same thing a fourth time. When
+the same structural reason comes back twice, change the plan, change the subject, or accept the
+limit and say so in your notes.
+
+**Spend the rounds on the thing that decided the comparison, not on everything the critic
+listed.** A good critic returns a long list and one item on it is usually doing all the work. Ask
+it which single property it would change first, fix that, and run again.
+
+---
+
 ## One failure mode worth knowing in advance
 
 In a game where you move along the ground, the ground is most of the screen. The usual way it
