@@ -56,15 +56,20 @@ if (!fs.existsSync(path.join(target, 'index.html'))) {
 const outDir = path.join(target, '_playtest');
 const label = path.relative(process.cwd(), target) || target;
 
-// TWO roots. The game is mounted under a prefix so it can live anywhere, and the
-// repo root is the fallback so a game's ../harness/assetlib.js still resolves.
+// TWO roots, and BOTH of them are a compatibility fallback rather than a layout.
 //
-// What is mounted is the game's PARENT, not the game directory itself. A game
-// laid out the way this repo's own example is, game/ and assets/ as siblings,
-// asks for ../assets/townhouse.js; mounting the game directory sends that above
-// the mount, where it lands in the repo and 404s. The town then loads completely
-// empty while the run still drives, still writes a filmstrip, and still reports
-// a distance, with nothing but a console-error count to say the world is missing.
+// A shipped game has to be a folder that works on its own: assets INSIDE the game
+// directory, loaded with ./assets/thing.js, the way example/warehouse-fps does.
+// Anything that reaches above its own folder is a game that runs here and 404s
+// everywhere else, because here it finds the parent mount and the repo root and
+// nowhere else has either.
+//
+// The mounts stay because an older game laid out with game/ and assets/ as
+// siblings should not silently lose its world, which is what mounting the game
+// directory alone would do: it loads empty while the run still drives, still
+// writes a filmstrip and still reports a distance, with nothing but a
+// console-error count to say the world is missing. Reaching outside is warned
+// about at the end of the run instead.
 const GAME_PREFIX = '/__game__/';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
                '.png': 'image/png', '.json': 'application/json', '.css': 'text/css' };
@@ -72,14 +77,24 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
 const MOUNT = path.dirname(target);
 const GAME_URL = `${GAME_PREFIX}${path.basename(target)}/`;
 
+// Anything served from outside the game's own directory, so the run can say so.
+const escaped = new Set();
+
 function resolveRequest(urlPath) {
   if (urlPath.startsWith(GAME_PREFIX)) {
     const file = path.join(MOUNT, urlPath.slice(GAME_PREFIX.length));
-    if (file.startsWith(MOUNT) && fs.existsSync(file)) return file;
+    if (file.startsWith(MOUNT) && fs.existsSync(file)) {
+      if (!file.startsWith(target + path.sep)) escaped.add(path.relative(MOUNT, file));
+      return file;
+    }
   }
   const file = path.join(ROOT, urlPath.startsWith(GAME_PREFIX)
     ? urlPath.slice(GAME_PREFIX.length - 1) : urlPath);
-  return file.startsWith(ROOT) ? file : null;
+  if (!file.startsWith(ROOT)) return null;
+  if (fs.existsSync(file) && urlPath.startsWith(GAME_PREFIX)) {
+    escaped.add(path.relative(ROOT, file) + '  (from this repo)');
+  }
+  return file;
 }
 
 const server = createServer((req, res) => {
@@ -270,6 +285,14 @@ const peakTris = Math.max(...samples.filter(Boolean).map((s) => s.tris || 0));
 
 const problems = [];
 if (stripProblem) problems.push(stripProblem);
+// A game that reaches outside its own folder works here and nowhere else. Here it
+// finds the parent mount and this repo; a zip on a web host has neither, and every
+// one of these becomes a 404 with the game already past its loading screen.
+if (escaped.size) {
+  problems.push(`${escaped.size} file(s) were served from OUTSIDE the game directory, so this ` +
+                `game is not a folder and will 404 wherever you host it: ` +
+                `${[...escaped].slice(0, 3).join(', ')}. Move them in and load with ./`);
+}
 if (!hasPos) {
   problems.push(`the game reports no __GAME__.pos, so this ran on wall clock and nothing below ` +
                 `about movement means anything. Expose it.`);

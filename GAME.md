@@ -43,9 +43,11 @@ something was allowed to fail it.
 
 ## Before you generate anything: lock the style
 
-Write [docs/style-lock.md](docs/style-lock.md) for your game. One style sentence, the palette as
-exact hex values, and real sizes for the common objects. Hand the identical file to every agent
-that generates anything.
+Write a style lock for your game, in your own project folder, using the template in
+[docs/style-lock.md](docs/style-lock.md). One style sentence, the palette as exact hex values, and
+real sizes for the common objects. Hand the identical file to every agent that generates anything.
+
+The file in this repo is the template. Write yours somewhere else; do not edit it in place.
 
 This is a ten minute step and it decides whether you get a set or a pile. Agents generating in
 parallel cannot see each other's work, so the file is the only thing they share. Twenty six
@@ -114,10 +116,17 @@ and it cannot test a game that is tapped, dragged or turn-based at all. If yours
 the principle still holds and the tool does not: write the equivalent for your own input, drive
 it with real pointer or touch events rather than by calling into the game, and capture frames
 while things are happening. A build here shipped unstartable on every phone for weeks because
-every check drove it through its debug hooks. To drive it
-yourself, `node harness/serve.mjs <same dir>` and open the URL it prints. Both take a directory
-anywhere on disk, and both expect `assets/` beside it, which is the layout every example here
-uses. For playtest to work, expose:
+every check drove it through its debug hooks.
+
+To drive the game yourself, `node harness/serve.mjs <same dir>` and open the URL it prints. Both
+tools take a directory anywhere on disk.
+
+**Your game must be a folder that works on its own.** Put `assets/` INSIDE the game directory and
+load with `./assets/thing.js`, the way [example/warehouse-fps](example/) does, so the whole thing
+can be zipped and hosted anywhere. The harness also serves the game's parent and falls back to
+this repo, which means a game that reaches outside its own folder keeps working right up until you
+deploy it, and then dies with a 404 for every asset. That fallback is a development convenience.
+It is not a layout. `playtest.mjs` warns if your game reaches above its own directory. For playtest to work, expose:
 
 ```js
 window.__READY__ = true;               // loaded and startable
