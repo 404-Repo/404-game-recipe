@@ -1,6 +1,6 @@
 # A game that came out of this repo
 
-**[Play it](https://ben-atlas.github.io/warehouse-fps/)** &nbsp;·&nbsp; `warehouse-fps/` is the
+**[Play it](https://404-repo.github.io/warehouse-fps/)** &nbsp;·&nbsp; `warehouse-fps/` is the
 whole thing, 708 KB, no build step. Serve the folder and it runs.
 
 ```bash

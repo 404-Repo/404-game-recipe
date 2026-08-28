@@ -21,7 +21,7 @@ pallets, the totes, the catwalk and its lamps, the forklift, the soldier, the ca
 hands. 33 reference images, 99 candidate modules written, 33 kept. Nothing is hand-modelled,
 nothing is downloaded, and there is not one image file in the finished game.*
 
-**[Play it](https://ben-atlas.github.io/warehouse-fps/)**. It is in this repo too, under
+**[Play it](https://404-repo.github.io/warehouse-fps/)**. It is in this repo too, under
 [`example/warehouse-fps`](example/), at 708 KB, and it runs from a served folder with no build step.
 
 ```
