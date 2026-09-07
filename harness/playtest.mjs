@@ -304,8 +304,11 @@ if (!hasPos) {
                 `about movement means anything. Expose it.`);
 } else if (stalledLegs) {
   problems.push(`${stalledLegs} of ${ROUTE.length} legs could not cover their distance within ` +
-                `${LEG_WALL_CAP_MS() / 1000}s. Either the car is stuck on something, or input is ` +
-                `not reaching the game${software ? ', or this software rasteriser is slower still' : ''}.`);
+                `${LEG_WALL_CAP_MS() / 1000}s. Either the car is stuck on something, input is not ` +
+                `reaching the game${software ? ', this software rasteriser is slower still' : ''}, or ` +
+                `this route does not fit your game: it drives fifty metres forward and turns, which ` +
+                `walks an interior straight into a wall. The example in this repo fails here for that ` +
+                `reason. See docs/gates.md and write the gate your game needs.`);
 }
 if (peakDraws > BUDGET.draws) problems.push(`${peakDraws} draw calls, over the ${BUDGET.draws} budget.`);
 if (peakTris > BUDGET.tris) problems.push(`${peakTris.toLocaleString()} triangles, over the ${BUDGET.tris.toLocaleString()} budget.`);
