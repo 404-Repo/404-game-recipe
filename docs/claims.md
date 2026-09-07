@@ -65,13 +65,17 @@ the picture stands still has learned to satisfy you rather than to look good.
 
 They exist so that "make it better" becomes a specific thing to change, and so that a fresh critic
 each round can point at the same evidence. In three rounds ours named one deciding property each
-time, and each one moved the blind result:
+time:
 
-| round | the property the critic named | blind pairs won against the bar |
-|---|---|---|
-| 1 | hero scale and value range: the player is a small matte object and shade crushes to black | 0 of 8 |
-| 2 | nothing in the frame ever gets bright or vivid: p98 luma 209 against the bar's 239 | 1 of 8 |
-| 3 | the hero object's own surfaces: no gloss, no reflection, no readable driver | 2 of 8 |
+| round | the property the critic named | blind pairs won against the bar | how the losses were scored |
+|---|---|---|---|
+| 1 | hero scale and value range: the player is a small matte object and shade crushes to black | 0 of 8 | 6 decisive, 2 clear |
+| 2 | nothing in the frame ever gets bright or vivid: p98 luma 209 against the bar's 239 | 1 of 8 | 4 decisive, 3 clear |
+| 3 | the hero object's own surfaces: no gloss, no reflection, no readable driver | 0 of 8 | 2 decisive, 5 clear, 1 slight |
+
+The win column barely moved. The margins did: six decisive losses, then four, then two. Ask your
+critic how badly as well as which, or a round that plainly improved the picture reads as a round
+that did nothing.
 
 Spend the round on the one property, not on the critic's whole list. The list is long every time
 and one item on it is doing all the work.

@@ -41,6 +41,11 @@ something was allowed to fail it.
 > which one looks better. Do this in ThreeJS. /loop until it's utterly perfect. Fan out
 > sub-agents and ultracode.
 
+That prompt assumes an agent that can fan out sub-agents and look at images, since the choice
+between candidates and every critic round are both made by looking.
+[docs/needs.md](docs/needs.md) says what else helps, what to do if your setup cannot do one of
+those, and what a build this size actually cost us.
+
 ## Before you generate anything: lock the style
 
 Write a style lock for your game, in your own project folder, using the template in
@@ -207,16 +212,19 @@ limit and say so in your notes.
 **Spend the rounds on the thing that decided the comparison, not on everything the critic
 listed.** A good critic returns a long list and one item on it is usually doing all the work. Ask
 it which single property it would change first, fix that, and run again. Three rounds of one build
-here, each with a fresh critic, each naming one property, and the blind result moving each time:
+here, each with a fresh critic, each naming one property:
 
-| round | the property the critic named | pairs won against the bar |
-|---|---|---|
-| 1 | hero scale and value range: the player is a small matte object and shade crushes to black | 0 of 8 |
-| 2 | nothing in the frame ever gets bright: 98th percentile luma 209 against the bar's 239 | 1 of 8 |
-| 3 | the hero object's own surfaces: no gloss, no reflection, no readable driver | 2 of 8 |
+| round | the property the critic named | pairs won against the bar | how the losses were scored |
+|---|---|---|---|
+| 1 | hero scale and value range: the player is a small matte object and shade crushes to black | 0 of 8 | 6 decisive, 2 clear |
+| 2 | nothing in the frame ever gets bright: 98th percentile luma 209 against the bar's 239 | 1 of 8 | 4 decisive, 3 clear |
+| 3 | the hero object's own surfaces: no gloss, no reflection, no readable driver | 0 of 8 | 2 decisive, 5 clear, 1 slight |
 
-It beat the floor eight pairs out of eight from the first round on. Both numbers matter: the first
-says the method is working, the second says how far there is to go.
+Read only the win column and round 3 undid round 2. Read the margins and the build lost by less
+every round: six decisive losses, then four, then two. Eight pairs is a coarse instrument and the
+count can sit still while the picture moves, which is why we ask the critic how badly as well as
+which. It beat the floor eight pairs out of eight from the first round on. Both of those matter:
+the floor says the method is working, the bar says how far there is to go.
 
 **What it costs, so you can budget.** That build was 25 agents for the first pass, roughly two
 million tokens and ninety minutes for each critic round after it, and about ten hours end to end.

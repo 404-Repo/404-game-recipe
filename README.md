@@ -53,6 +53,7 @@ open-model path, and it is a rented one. It was built and tested with Claude Cod
 | [404.md](404.md) | how to make the 3D, with your agent or with the open model |
 | [docs/gates.md](docs/gates.md) | writing a gate for your own game, since ours drives forward and yours may not |
 | [docs/claims.md](docs/claims.md) | the floor build, and turning reference frames into claims that can fail a round |
+| [docs/case-drive.md](docs/case-drive.md) | one build start to finish: what each round changed, what it scored, what it cost |
 | [docs/traps.md](docs/traps.md) | bugs in this domain that produce wrong output silently |
 | `harness/` | verify assets, play the game, check what you shipped, prove the live URL works |
 
@@ -93,6 +94,49 @@ from primitives it invents.
 
 **[→ GAME.md](GAME.md)**
 
+## 3. The lighting
+
+Assets are only half of what a frame is made of, and the repo used to stop at the assets. A reader
+writing lighting from scratch writes one `DirectionalLight` and one `AmbientLight`, and that is a
+lit box: every surface in frame is the same colour temperature, so the picture has no depth in it
+and no amount of asset quality puts any back.
+
+`harness/rig.js` is one rig that works, offered so nobody starts from a grey scene. It is a
+recommendation and not a rule, and the architecture of your game stays yours. Copy it next to
+`assetlib.js` the way you copy that one. It has no npm dependency, no image file and no static
+import, and it is two lines:
+
+```js
+const rig = createRig(THREE, renderer, scene, { hour: 16.5, azimuth: 250 });
+rig.render(camera, dt);        // once a frame, instead of renderer.render(scene, camera)
+```
+
+![a yard of containers and racking under one directional light and one ambient](docs/img/rig-before.png)
+
+*One `DirectionalLight`, one `AmbientLight`, no tone mapping, no fog. The key was given a 2048
+shadow map and both its intensities were scaled until its sunlit ground matched the rig's, because
+a baseline with no shadows and half the brightness is a straw man. Twenty three placements of
+seventeen generated assets, a ground plane, eye height.*
+
+![the same yard under harness/rig.js at half past four](docs/img/rig-after.png)
+
+*The same frame, same assets, same camera, same sun direction, lit by `harness/rig.js` at 16:30.*
+
+Look at the shaded sides and the distance rather than at the brightness, which is matched on
+purpose. Measured on two patches of the same road, one in sun and one in the shadow of the same
+object: shade is **55 units of blue minus red cooler than sun** under the rig and **4 units
+warmer** under the pair of lights, which is the lit box. The 98th percentile of the frame is 221
+against 215, and **1.3 percent of the plain frame is clipped to white** against none of the rig's,
+because there is no tone curve on it.
+
+Two honest notes on that pair. The difference is real and it is not dramatic, because a shadow
+casting key at a matched exposure is already most of the way there; what the rig adds on top is the
+colour of the shade, a sky that agrees with the light, and haze with distance in it. And the rig
+costs three times the draw calls of the two lights in this scene, 549 against 183, because a second
+cascade and a composer pass redraw the world. The phone tier drops the second cascade and the
+composer for that reason. Nobody has measured either on a real GPU. The rig's own header comment
+carries the full table, the settings and what it does not do, which includes ambient occlusion.
+
 ---
 
 ## Start
@@ -118,6 +162,7 @@ Then point your agent at [GAME.md](GAME.md), or at [404.md](404.md) if you only 
 | **[harness/wrap.mjs](harness/wrap.mjs)** | Rescales open-model output into this repo's contract. |
 | **[harness/playtest.mjs](harness/playtest.mjs)** | Plays the finished game and captures it **in motion**. |
 | **[harness/selftest/](harness/selftest/)** | Proves the verifier fires, against deliberately broken fixtures. |
+| **[harness/rig.js](harness/rig.js)** | A render rig you can drop into a game in two lines. Two colour temperatures, aerial perspective, a sky that agrees with the light. |
 | **[harness/assetlib.js](harness/assetlib.js)** | The loader. Copy it, don't rewrite it. |
 
 Every tool takes the directory you are working in as its argument, so nothing here assumes a
