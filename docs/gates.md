@@ -134,10 +134,18 @@ have nothing to do with the change you are testing. Five runs of near identical 
 build here returned ground medians of 41, 33, 20, 17 and 16, and two agents spent part of a round
 reading that as signal.
 
-Seed your steering, or drive fixed inputs, or teleport to fixed points and photograph from there.
+The obvious fix, seeding, is not the fix. That build's world was already generated from a fixed
+seed and its frames already fired at fixed distances; the variance was behavioural. The driver
+polled telemetry every 60 ms and steered reactively, so wall clock jitter changed the player's line
+through an identical lane, and the frame taken at 130 m was shot from a different place each run.
+A deterministic world does not give you a repeatable measurement while the driver's own timing is
+part of the instrument. Make driver decisions at fixed distances rather than fixed times, or drive
+fixed inputs, or teleport to fixed points and photograph from there.
+
 Whatever you do, run the gate twice on an unchanged build first and look at the spread: that number
 is the noise floor of every statistic you take from those frames, and any claim smaller than it is
-not a claim. This costs one run and it is the cheapest thing in this document.
+not a claim. Report a median and a spread over several runs, never one run. This costs one run and
+it is the cheapest thing in this document.
 
 ---
 

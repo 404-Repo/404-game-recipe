@@ -89,6 +89,29 @@ if (problems.length) {
 }
 console.log('every module parses, every path stays inside the folder');
 
+// 4. geometry smuggled in as data. The jam's one hard rule is that every object is Three.js code
+// written through the recipe, and a downloaded mesh decoded into a vertex array inside generate()
+// passes every geometric check the verifier has. It cannot be proven from outside, so this is a
+// flag for a reader, not a failure: a long run of numeric literals in one array, or base64, in a
+// module under assets/, and a judge reads that file.
+const smuggled = [];
+for (const f of scripts.filter((f) => /[\/\\]assets[\/\\]/.test(f))) {
+  const src = fs.readFileSync(f, 'utf8');
+  let longest = 0;
+  for (const m of src.matchAll(/\[([^\[\]]{64,})\]/g)) {
+    const nums = (m[1].match(/-?\d+(?:\.\d+)?(?:e[-+]?\d+)?/gi) || []).length;
+    const others = m[1].replace(/[-\d.,\s+e]/gi, '').length;
+    if (others === 0 && nums > longest) longest = nums;
+  }
+  const b64 = /['"`][A-Za-z0-9+/]{200,}={0,2}['"`]/.test(src) || /data:[a-z]+\/[a-z0-9.+-]+;base64,/i.test(src);
+  if (longest > 64) smuggled.push(`${path.relative(target, f)}: an array of ${longest} numbers`);
+  if (b64) smuggled.push(`${path.relative(target, f)}: base64 data`);
+}
+if (smuggled.length) {
+  console.log('\nflagged, not failed: geometry should come from Three.js constructors, and a judge will read these:');
+  for (const s of smuggled) console.log('  ' + s);
+}
+
 if (STAMP) {
   const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
   // The query string is optional in the match so that an already stamped specifier is

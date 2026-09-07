@@ -10,8 +10,9 @@ quality is the ceiling on every agent-built game we have seen, including our own
 No mesh files, no textures, nothing to download. An agent can read an asset, change it and place
 it, which is not true of anything it fetches as a binary.
 
-404 also runs a continuous open competition to push image-to-code quality, and the winning
-weights are open. This repository is the whole method, free: how to make assets this way, and how
+404 also runs a continuous open competition to push image-to-code quality; the winning model is
+served through a RunPod template (see [404.md](404.md); the weights repository was not reachable
+anonymously when we last checked, so treat "open" as pending). This repository is the whole method, free: how to make assets this way, and how
 to build a game out of them.
 
 ![a warehouse loading dock, seen down the sights of a carbine](docs/img/hero.png)
@@ -161,6 +162,10 @@ Then point your agent at [GAME.md](GAME.md), or at [404.md](404.md) if you only 
 | **[harness/verify.mjs](harness/verify.mjs)** | Renders every asset from four sides. Catches what review misses. |
 | **[harness/wrap.mjs](harness/wrap.mjs)** | Rescales open-model output into this repo's contract. |
 | **[harness/playtest.mjs](harness/playtest.mjs)** | Plays the finished game and captures it **in motion**. |
+| **[harness/jam.mjs](harness/jam.mjs)** | The jam gate: loads your deployed URL on a phone over 4G, touches it, prints the verdict block an entry needs. |
+| **[harness/live.mjs](harness/live.mjs)** | Proves the deployed game starts from a real touch and moves. |
+| **[harness/ship.mjs](harness/ship.mjs)** | Parses every module, refuses paths that escape the folder, stamps imports against stale caches, flags geometry smuggled in as data. |
+| **[harness/pairs.mjs](harness/pairs.mjs)** | Builds the blind pairs a critic judges and withholds the key. |
 | **[harness/selftest/](harness/selftest/)** | Proves the verifier fires, against deliberately broken fixtures. |
 | **[harness/rig.js](harness/rig.js)** | A render rig you can drop into a game in two lines. Two colour temperatures, aerial perspective, a sky that agrees with the light. |
 | **[harness/assetlib.js](harness/assetlib.js)** | The loader. Copy it, don't rewrite it. |

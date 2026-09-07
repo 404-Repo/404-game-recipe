@@ -1,5 +1,9 @@
 # Building a game
 
+> **Entering the 404 game jam?** The rules, dates, prizes and how to submit live in
+> [404-Repo/404-game-jam](https://github.com/404-Repo/404-game-jam). The gate your entry must pass
+> is `node harness/jam.mjs <your live url>` in this repo. Everything below is how to build the game.
+
 Two ingredients. The prompt below builds the game. [404.md](404.md) makes the 3D it needs.
 
 First, once, or the gate below cannot run:
