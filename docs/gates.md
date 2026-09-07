@@ -142,6 +142,24 @@ capture that should run at 60 frames a second records at less than one.
 
 ---
 
+## Checking the thing you deployed
+
+The gate proves your folder works. `harness/live.mjs` proves the URL you gave someone works, which
+is a different claim: paths that only resolved from your working tree, a cached module against a
+new page, a filename whose case only matters on a Linux host, an asset behind a CDN that 404s.
+
+```bash
+node harness/live.mjs https://you.github.io/yourgame/game/     # phone viewport, real touch
+node harness/live.mjs <url> --desktop                          # laptop viewport, click and keys
+```
+
+Two details in there worth stealing for your own gate. **A virtual stick reads the vector from
+where the finger landed**, so pressing its centre and holding still is not input: land in the
+middle, drag, then hold. And **a touch control on a laptop viewport is usually still in the DOM
+and hidden**, so a check that holds it moves nothing and blames the game.
+
+---
+
 ## Recording a clip
 
 Once a gate can drive your game, it can film it. Use the DevTools screencast rather than

@@ -60,20 +60,31 @@ else if (DESKTOP) await page.click('#startb');
 else await page.touchscreen.tap(...await page.$eval('#startb', (b) => { const r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }));
 await new Promise((r) => setTimeout(r, 1500));
 
-// hold something for four seconds: the named control, else a touch control, else the arrow key
-const control = HOLD || (await page.evaluate(() => {
-  for (const id of ['#stick', '#steerR', '#steerL', '#bgas', '#look']) if (document.querySelector(id)) return id;
+// hold something for four seconds: the named control, else a VISIBLE touch control, else a key.
+// On a laptop viewport the touch controls are usually in the DOM and hidden, and holding one of
+// those moves nothing: a game that hides its stick behind a media query still passed this check
+// while reporting the player never moved.
+const control = HOLD || (DESKTOP ? '' : await page.evaluate(() => {
+  for (const id of ['#stick', '#steerR', '#steerL', '#bgas', '#look']) {
+    const e = document.querySelector(id);
+    if (e && e.offsetParent !== null && e.getBoundingClientRect().width > 8) return id;
+  }
   return '';
 }));
 if (control) {
-  const box = await page.$eval(control, (e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  // a virtual stick reads the vector from where the finger landed, so pressing its centre and
+  // holding still is no input at all. Land in the middle, then drag up and hold there.
+  const box = await page.$eval(control, (e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
   await page.touchscreen.touchStart(box.x, box.y);
+  await new Promise((r) => setTimeout(r, 120));
+  await page.touchscreen.touchMove(box.x, box.y - Math.max(24, box.h * 0.35));
   await new Promise((r) => setTimeout(r, 4000));
   await page.touchscreen.touchEnd();
 } else {
-  await page.keyboard.down('ArrowUp');
+  // most games take one of these two for forward; hold both, nothing binds them to opposite ends
+  await page.keyboard.down('ArrowUp'); await page.keyboard.down('KeyW');
   await new Promise((r) => setTimeout(r, 4000));
-  await page.keyboard.up('ArrowUp');
+  await page.keyboard.up('KeyW'); await page.keyboard.up('ArrowUp');
 }
 
 const after = await page.evaluate(() => (window.__GAME__ && window.__GAME__.pos) || null);
@@ -88,7 +99,7 @@ await browser.close();
 
 console.log(`url        ${url}`);
 console.log(`ready      ${ready} s   (${DESKTOP ? 'laptop viewport, click' : 'phone viewport, real touch'})`);
-console.log(`held       ${control || 'ArrowUp'}`);
+console.log(`held       ${control || 'ArrowUp and KeyW'}`);
 console.log(`moved      ${moved === null ? '?' : moved.toFixed(1) + ' m'}`);
 console.log(`screenshot ${path.resolve(OUT)}`);
 if (problems.length) {
