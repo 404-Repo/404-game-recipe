@@ -52,17 +52,21 @@ separates the bar from the floor is measuring something the method is supposed t
    the weakest ones by judgement and say that is what you did. A second control helps if you have
    one: the same statistic measured on your own previous round separates a claim that is about
    quality from a claim that is about the floor being bad.
-   **A band-based statistic does not transfer between a capture you control and a photograph.**
+   **Capture your build at the reference's aspect ratio before you take a single band statistic.**
    A band defined as a fraction of the frame covers a different amount of world at every aspect
-   ratio, and a game that adjusts its field of view for a portrait screen moves it again. One build
-   here measured its bar at 1280 square (the image service only returned squares), its desktop gate
-   at 1280 by 720 and its phone gate at 390 by 844, read all three through one band, and spent a
-   round on a "failure" that was the frame shape. Redefining the band by width instead of height
-   moved the two captures further apart, not closer, and a photograph has no camera to reference a
-   band to. So: absolute numbers at a named capture size are sound, an A/B between two of your own
-   arms shot at the same size is sound, and a magnitude against the bar is not a number, it is a
-   direction. Say which capture size every figure came from, and let the blind pairs, judged by eye
-   on whole frames, carry the comparison against the reference. That is what they are for.
+   ratio, and a game that widens its field of view for a portrait screen moves it again. One build
+   here had a square bar (the image service only returned squares), a widescreen desktop gate and a
+   portrait phone gate, read all three through one band, and lost most of a day to two "findings"
+   that were the frame shape: a claim looked four times worse or better depending on which capture
+   it compared. Cropping after the fact does not fix it, and redefining the band by width made it
+   worse. What fixed it was giving the gate a flag to render its measurement pass at the reference's
+   own shape, square against square, at which point the real gap reappeared at about the size first
+   reported. So: your capture tool must be able to match the reference's shape; the measurement
+   pass runs at that shape and the filmstrip a critic judges stays at the shape people play; and
+   every figure in your claims file names the capture size it came from. The comparison still is
+   not exact, since the game chose its field of view and the photographer chose theirs, which is
+   one more reason the blind pairs judged by eye on whole frames carry the verdict and the
+   statistics only steer.
 
 5. **Give every claim a "gameable by" line**, naming a concrete way a build could hit the number
    and still look wrong. A statistic will be optimised the moment it exists, and a bad statistic is
