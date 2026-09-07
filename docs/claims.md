@@ -41,6 +41,12 @@ separates the bar from the floor is measuring something the method is supposed t
    is loaded rather than tastefully arranged; the volume above the counter is full.
 3. **Measure both sets.** One script, one row per frame, statistics computed on the frame resampled
    to a fixed width, with bands taken inside the frame so a HUD at the edge does not enter them.
+   Then run the gate a second time on the unchanged build and measure again. A median over eight
+   frames of one run is one sample, and on one build here four wrong conclusions in an afternoon
+   came from a genuine measurement believed one run too early: the route's own variance between
+   runs was larger than most of the changes being measured. Two samples before you believe a
+   column, and if they disagree by more than the effect you are looking for, the effect is not
+   there yet.
 4. **Throw away the statistics that do not separate.** Keep a claim only if the bar and the floor
    land on different sides of it on **70 percent or more** of frames. We started with a dozen and
    kept eight; the four we dropped had felt like the most insightful ones.
