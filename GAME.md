@@ -77,6 +77,12 @@ same way you source asset references — whatever image tool your agent has
 objects. Photographs work, and for anything that exists in the world they are easier to find
 than object references are.
 
+**Build a floor as well as a bar.** Have one agent build the same game in one pass, no loop, no
+critic, no rounds, and keep six frames of it. That is what a reader would have got without any of
+this, and every round after it is measured between two marks instead of against a feeling. It costs
+an hour, and it is the only evidence you will have that the loop is paying for itself.
+[docs/claims.md](docs/claims.md) has both halves of this.
+
 **Then turn that image into claims you can fail a round on.** A critic holding a photograph still
 argues taste. Write down, before building, what is actually true of the reference, as statements
 a machine could check. From one set of night market photographs: the surround is nearly black and
@@ -112,11 +118,16 @@ node harness/playtest.mjs <dir>
 
 plays the game and captures six frames while it moves. **It drives forward**, so it tests a game
 you drive. It cannot reach a menu, a death screen or a restart, and those stay yours to check,
-and it cannot test a game that is tapped, dragged or turn-based at all. If yours is one of those,
-the principle still holds and the tool does not: write the equivalent for your own input, drive
-it with real pointer or touch events rather than by calling into the game, and capture frames
-while things are happening. A build here shipped unstartable on every phone for weeks because
-every check drove it through its debug hooks.
+and it cannot test a game that is tapped, dragged or turn-based at all.
+
+**Most games need their own gate, and the failure is quiet.** Point this one at a shooter and it
+never aims and never fires, so the subject of the game goes untested while the run reports a clean
+pass. Point it at a kart racer and it cannot drift. A gate that passes while testing none of the
+game is worse than no gate, because you believe it. Writing one for your input is an afternoon and
+it is the tool you will run a hundred times: [docs/gates.md](docs/gates.md) is what two of ours
+learned, including the telemetry a gate steers by and a driver in about sixty lines. Drive with
+real pointer, key and touch events rather than by calling into the game; a build here shipped
+unstartable on every phone for weeks because every check drove it through its debug hooks.
 
 To drive the game yourself, `node harness/serve.mjs <same dir>` and open the URL it prints. Both
 tools take a directory anywhere on disk.
@@ -149,6 +160,28 @@ fast one. Both then report that the player would not move, about a game that is 
 
 ---
 
+## Ship it, then check what you shipped
+
+```bash
+node harness/ship.mjs <dir> --stamp     # every module parses, no path escapes, cache-stamp the imports
+node harness/live.mjs <url>             # load the deployed game on a phone viewport and touch it
+```
+
+Two habits that cost us a day each before we had them.
+
+**Parse every module before it goes out.** An asset that throws on import prints one line and the
+game carries on, emptier than it should be. We shipped four rounds where three assets were broken
+by a comment appended to a one-line arrow body: the level logged "loaded empty", the frame rate
+gate saw nothing wrong because an empty level is fast, and the filmstrip looked plausible.
+
+**Then open the thing you actually gave someone.** Static hosts cache (GitHub Pages sends
+`max-age=600`), so a visitor who opened your game just before you pushed keeps the old modules
+against the new page, which is a version that has never existed. Stamping fixes that; `live.mjs`
+proves it, by loading the real URL in a phone viewport, tapping the real start button with a real
+touch, holding a control, and asserting the player moved.
+
+---
+
 ## Knowing when to stop
 
 Nothing in this repo caps anything. There is no retry limit, no round limit and no spend limit,
@@ -173,7 +206,22 @@ limit and say so in your notes.
 
 **Spend the rounds on the thing that decided the comparison, not on everything the critic
 listed.** A good critic returns a long list and one item on it is usually doing all the work. Ask
-it which single property it would change first, fix that, and run again.
+it which single property it would change first, fix that, and run again. Three rounds of one build
+here, each with a fresh critic, each naming one property, and the blind result moving each time:
+
+| round | the property the critic named | pairs won against the bar |
+|---|---|---|
+| 1 | hero scale and value range: the player is a small matte object and shade crushes to black | 0 of 8 |
+| 2 | nothing in the frame ever gets bright: 98th percentile luma 209 against the bar's 239 | 1 of 8 |
+| 3 | the hero object's own surfaces: no gloss, no reflection, no readable driver | 2 of 8 |
+
+It beat the floor eight pairs out of eight from the first round on. Both numbers matter: the first
+says the method is working, the second says how far there is to go.
+
+**What it costs, so you can budget.** That build was 25 agents for the first pass, roughly two
+million tokens and ninety minutes for each critic round after it, and about ten hours end to end.
+A targeted round with three agents and no critic was forty minutes. Yours will differ, but the
+shape holds: the first pass dominates, and a round is not cheap enough to run absent-mindedly.
 
 ---
 

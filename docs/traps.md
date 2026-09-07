@@ -205,3 +205,79 @@ defaults with it.
 If you deploy to GitHub Pages under `/<repo>/`, an absolute path like `/assets/car.js` resolves
 to the domain root and 404s. The page loads, the game is dead. Use relative paths, and test by
 serving from a subpath locally before you deploy.
+
+---
+
+## Transparent materials are drawn twice
+
+A material with `transparent: true` goes through the transparent pass, and three.js will draw a
+double-sided transparent mesh once per side. Clone every material on seven AI karts so they can
+fade near the camera and the cost is not the fade: the pack in front cost 328 draw calls for 24
+meshes, 47 calls a kart, and the budget gate started failing on runs where the player happened to
+be mid-pack. Set `forceSinglePass` where the two-sided pass is not doing anything for you, or keep
+the material opaque and hide the object outright.
+
+---
+
+## Bloom turns a two pixel spark into a forty pixel disc
+
+Threshold bloom runs its blur at quarter resolution. Anything small and very bright, a spark, a
+tracer, a specular hit on chrome, is a couple of pixels before the blur and a soft round blob
+after it. It reads as bokeh, not as speed.
+
+Cap the HDR value of effects (1.4 is plenty for a spark against a sunlit scene), raise the
+threshold, or shrink the radius of the first blur level. Judge it on a crop at 4x, because at
+normal size an orange disc and an orange streak look the same in a thumbnail and completely
+different in motion.
+
+---
+
+## Clearcoat over a saturated sky reads magenta in shade
+
+A clearcoat layer reflects the environment, and at grazing angles Fresnel makes that reflection
+most of what you see. Under a saturated blue zenith, a red car body in shadow measured 119, 36, 80:
+blue minus green plus 40, which the eye reads as magenta rather than as dark red. Neither the
+index of refraction nor the environment intensity fixes it without killing the sheen that made you
+add clearcoat in the first place.
+
+Give the paint a desaturated environment map of its own, or take the saturation out of the zenith.
+This one is easy to miss because the object looks right in sunlight and only goes wrong in shade,
+which is where a hero object spends much of a lap.
+
+---
+
+## A camera that inherits the ground normal rolls the world
+
+Tilting the chase camera with the surface under the player feels like a good idea for a second.
+Then the player clips a grass verge, the surface normal there is nothing like the road's, and the
+whole frame rolls twenty degrees with the horizon and the buildings in it.
+
+Roll the camera from the track's own banking, not from what is under the wheels, and clamp it. On
+a spin, hold the camera's heading and ease it back rather than following the spin.
+
+---
+
+## A flat card reads as a flat card the moment it is near
+
+Alpha cutout cards are the right answer for crowds, foliage and anything with a complicated
+silhouette at distance. Near the camera they announce themselves: one plane, a straight top edge
+where the picture was cropped, and a hard cut side edge where two of them meet.
+
+Three fixes, all cheap: cut the card into slices at the gaps in the picture and set each slice at
+its own depth and angle; cross two or three planes at sixty degrees for anything with volume like
+a tree or a bougainvillea; and model the front rank in geometry so the first thing the eye lands
+on is not a picture. A two texel alpha feather on the material edge stops the cut looking like
+paper.
+
+---
+
+## When one view holds the whole level, trimming assets is not the fix
+
+A viewpoint that sees the entire map will blow a triangle budget however careful the assets are.
+We spent two rounds cutting segment counts on the objects a census named, and each round the peak
+came back, because the remaining triangles were all legitimately in frame.
+
+The fix is a second bake per block: the same geometry with every part whose largest dimension is
+under about 25 cm dropped, swapped in beyond 90 m or so. It took the peak from 1.55M to 1.24M in
+one change, and it is invisible in a filmstrip. Reach for it before you decimate anything, which
+you should not be doing at all.

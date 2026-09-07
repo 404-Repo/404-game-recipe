@@ -45,6 +45,17 @@ open-model path, and it is a rented one. It was built and tested with Claude Cod
 - **It is inspectable.** When an asset comes out wrong you can read why, which is the difference
   between fixing a generator and rerolling it.
 
+## What is in here
+
+| | |
+|---|---|
+| [GAME.md](GAME.md) | the prompt, and the handful of things that decide whether the loop works |
+| [404.md](404.md) | how to make the 3D, with your agent or with the open model |
+| [docs/gates.md](docs/gates.md) | writing a gate for your own game, since ours drives forward and yours may not |
+| [docs/claims.md](docs/claims.md) | the floor build, and turning reference frames into claims that can fail a round |
+| [docs/traps.md](docs/traps.md) | bugs in this domain that produce wrong output silently |
+| `harness/` | verify assets, play the game, check what you shipped, prove the live URL works |
+
 ## 1. The assets
 
 The method is one reference image, three independent attempts at geometry, a render from four
