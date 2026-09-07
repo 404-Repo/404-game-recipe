@@ -52,6 +52,15 @@ separates the bar from the floor is measuring something the method is supposed t
    the weakest ones by judgement and say that is what you did. A second control helps if you have
    one: the same statistic measured on your own previous round separates a claim that is about
    quality from a claim that is about the floor being bad.
+   **Measure every set at the same aspect ratio, or do not compare them.** A band defined as a
+   fraction of the frame covers a different amount of world in portrait than in landscape: the
+   bottom quarter of a phone frame is ground a few metres away, the bottom quarter of a widescreen
+   frame runs far down the scene. One build here measured its bar at 1280 square (the image service
+   only returned squares), its desktop gate at 1280 by 720 and its phone gate at 390 by 844, read
+   all three through one band, and spent a round on a "failure" that was the frame shape. It looked
+   four times worse or better depending on which capture it compared. Crop every set to one shape
+   before a single statistic is taken, and say which shape in the claims file.
+
 5. **Give every claim a "gameable by" line**, naming a concrete way a build could hit the number
    and still look wrong. A statistic will be optimised the moment it exists, and a bad statistic is
    worse than none because it certifies the failure.
