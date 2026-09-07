@@ -52,14 +52,17 @@ separates the bar from the floor is measuring something the method is supposed t
    the weakest ones by judgement and say that is what you did. A second control helps if you have
    one: the same statistic measured on your own previous round separates a claim that is about
    quality from a claim that is about the floor being bad.
-   **Measure every set at the same aspect ratio, or do not compare them.** A band defined as a
-   fraction of the frame covers a different amount of world in portrait than in landscape: the
-   bottom quarter of a phone frame is ground a few metres away, the bottom quarter of a widescreen
-   frame runs far down the scene. One build here measured its bar at 1280 square (the image service
-   only returned squares), its desktop gate at 1280 by 720 and its phone gate at 390 by 844, read
-   all three through one band, and spent a round on a "failure" that was the frame shape. It looked
-   four times worse or better depending on which capture it compared. Crop every set to one shape
-   before a single statistic is taken, and say which shape in the claims file.
+   **A band-based statistic does not transfer between a capture you control and a photograph.**
+   A band defined as a fraction of the frame covers a different amount of world at every aspect
+   ratio, and a game that adjusts its field of view for a portrait screen moves it again. One build
+   here measured its bar at 1280 square (the image service only returned squares), its desktop gate
+   at 1280 by 720 and its phone gate at 390 by 844, read all three through one band, and spent a
+   round on a "failure" that was the frame shape. Redefining the band by width instead of height
+   moved the two captures further apart, not closer, and a photograph has no camera to reference a
+   band to. So: absolute numbers at a named capture size are sound, an A/B between two of your own
+   arms shot at the same size is sound, and a magnitude against the bar is not a number, it is a
+   direction. Say which capture size every figure came from, and let the blind pairs, judged by eye
+   on whole frames, carry the comparison against the reference. That is what they are for.
 
 5. **Give every claim a "gameable by" line**, naming a concrete way a build could hit the number
    and still look wrong. A statistic will be optimised the moment it exists, and a bad statistic is
