@@ -5,7 +5,8 @@ cheap, and it is also why they read as painted cardboard next to a scanned mesh:
 real surface varies in colour, in roughness and in normal at the same time, and a
 flat `MeshStandardMaterial` varies in none of them.
 
-`harness/surfaces.js` generates all three maps into a canvas at load time from a
+`surfaces.js` (copy `harness/surfaces.js` into your game folder next to `assetlib.js`, the way
+[example/warehouse-fps](../example/) does) generates all three maps into a canvas at load time from a
 seed. Nothing is downloaded, nothing is licensed, and the same seed produces the
 same surface on every machine, so the zero-file rule in the asset contract holds
 exactly as before.
@@ -13,13 +14,13 @@ exactly as before.
 ## Using it
 
 ```js
-const crate = await ASSET('/assets/produce_crate_stack.js', { surfaces: true });
+const crate = await ASSET('./assets/produce_crate_stack.js', { surfaces: true });
 ```
 
 or once, for a whole game:
 
 ```js
-import { setSurfaceDefaults } from '/harness/surfaces.js';
+import { setSurfaceDefaults } from './surfaces.js';
 setSurfaceDefaults({ on: true });
 ```
 
@@ -94,6 +95,6 @@ node harness/surface-compare.mjs <dir-or-file>
 ```
 
 Renders each asset twice under one rig, flat on the left and textured on the
-right, into `harness/_surfaces/`, and prints the draw-call count both ways. It
+right, into `harness/_surfaces/` in this repo, and prints the draw-call count both ways. It
 exits non-zero if draw calls more than double, so the merge behaviour above stays
 true rather than becoming a comment that used to be true.

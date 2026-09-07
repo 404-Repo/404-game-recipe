@@ -123,6 +123,10 @@ if (!files.length) {
 }
 fs.mkdirSync(outDir, { recursive: true });
 
+// SwiftShader is forced here on purpose: still renders of assets under one light, where a
+// deterministic software rasteriser gives the same pixels on every machine and speed does not
+// matter. Do NOT copy this flag into a gate that measures play; there it pins a machine with a
+// GPU to the software path and a 60 fps capture records at under one. See docs/gates.md.
 const browser = await puppeteer.launch({
   headless: true,
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'],

@@ -16,7 +16,7 @@
  *
  * Opt in through the loader:
  *
- *     const crate = await ASSET('/assets/produce_crate_stack.js', { surfaces: true });
+ *     const crate = await ASSET('./assets/produce_crate_stack.js', { surfaces: true });
  *
  * or turn it on once for a whole game with `setSurfaceDefaults({ on: true })`.
  */

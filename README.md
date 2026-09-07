@@ -178,6 +178,8 @@ node harness/playtest.mjs /abs/path/to/my_game
 
 Both tools serve your directory under its own prefix, so a path inside it resolves normally and
 a path that climbs above it, such as a game's `../harness/assetlib.js`, still reaches this repo.
+That is a development convenience, not a layout: a shipped game copies the harness files in and
+imports them with `./`, or it 404s on any host.
 `harness/selftest/run.mjs` checks this, because the version that only served the repo root
 failed every asset in an outside directory with a message that read like a broken asset.
 

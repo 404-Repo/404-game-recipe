@@ -85,7 +85,7 @@ than object references are.
 **Build a floor as well as a bar.** Have one agent build the same game in one pass, no loop, no
 critic, no rounds, and keep six frames of it. That is what a reader would have got without any of
 this, and every round after it is measured between two marks instead of against a feeling. It costs
-an hour, and it is the only evidence you will have that the loop is paying for itself.
+60 to 90 minutes, and it is the only evidence you will have that the loop is paying for itself.
 [docs/claims.md](docs/claims.md) has both halves of this.
 
 **Then turn that image into claims you can fail a round on.** A critic holding a photograph still
@@ -140,7 +140,11 @@ tools take a directory anywhere on disk.
 **Your game goes in its own folder, outside this repo.** Nothing here has a default and it is the
 first decision you make: `~/mygame/` with `assets/` inside it is fine, and every tool in `harness/`
 takes that directory as its argument from wherever it lives. Keep this repo as the thing you clone
-and read, not as the thing you build inside.
+and read, not as the thing you build inside. Copy the three harness files, `assetlib.js`,
+`surfaces.js` and `rig.js`, into your game folder and import them with `./`, the way
+[example/warehouse-fps](example/) does; that is the one layout convention in this repo. Keep any
+gate script you write inside this repo's `harness/` folder, or symlink `node_modules` next to it,
+because `import puppeteer from 'puppeteer'` resolves from here and not from your game folder.
 
 **Your game must be a folder that works on its own.** Put `assets/` INSIDE the game directory and
 load with `./assets/thing.js`, the way [example/warehouse-fps](example/) does, so the whole thing

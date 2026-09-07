@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": { "node": ">=20" },
   "description": "Generate 3D game assets as code with an agent, verify them, and build a game out of them.",
   "scripts": {
     "selftest": "node harness/selftest/run.mjs && node harness/selftest/loader.mjs",

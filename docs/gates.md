@@ -11,9 +11,13 @@ about is never exercised. A gate that passes while testing none of the game is w
 because you believe it.
 
 The example in this repo shows it plainly. Run `node harness/playtest.mjs example/warehouse-fps`
-and the game loads, renders, holds its budgets and reports five of its six legs stalled, because
-the route drives fifty metres forward into a warehouse wall and the gate has no way to shoot, aim
-or turn a corner deliberately. Nothing is broken. The gate is simply not the gate that game needs.
+and the game loads, renders and holds its budgets, and then one of two things happens, depending
+on the run. Either the player is shot dead, often inside the first half minute, because the route
+walks forward into a warehouse full of soldiers and the gate has no way to aim, fire or take
+cover; the run stops there and says so, with how many of the six legs ran before the death and
+that the rest never ran. Or the player survives and the legs stall against walls instead, since
+fifty metres forward and a turn does not fit an interior either. Nothing in the game is broken.
+The gate is simply not the gate that game needs.
 
 So: **write the gate for your game.** It is an afternoon, it is the tool you will run a hundred
 times, and everything below is what two of ours learned the hard way.

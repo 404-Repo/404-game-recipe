@@ -9,8 +9,8 @@ and the one extra build that makes the whole comparison mean something.
 ## Build a floor first
 
 Before the loop starts, have **one agent build the same game in one pass**: no asset loop, no
-critic, no rounds, told not to read anything the rest of your build is using. An hour of its time,
-then drive it with your gate and keep six frames.
+critic, no rounds, told not to read anything the rest of your build is using. 60 to 90 minutes of
+its time, then drive it with your gate and keep six frames.
 
 That is your floor. Everything after it is measured between two marks rather than against a
 feeling:
@@ -22,7 +22,7 @@ feeling:
 A round that does not beat the floor on every pair means the loop is not paying for itself, and
 you want to know that on day two rather than at the end. Ours beat the floor eight pairs out of
 eight from the first critic round onward, which is the only evidence we have that any of this
-works, and it cost an hour to be able to say it.
+works, and it cost 60 to 90 minutes to be able to say it.
 
 The floor is also the honest control for your claims: a statistic that separates your build from
 the bar might just be separating "a game" from "a screenshot of a game". A statistic that

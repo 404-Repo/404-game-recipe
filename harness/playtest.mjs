@@ -7,7 +7,8 @@
  * The directory can be anywhere: relative, absolute, inside this repo or not.
  * It drives forward and photographs the result, which means it tests play. It
  * cannot reach a menu, a death screen or a restart, so those stay yours to
- * check.
+ * check. It does read `__GAME__.over`, and stops the run when the game ends,
+ * so a death is reported as a death rather than as legs that stalled.
  *
  * Two habits are baked in here because skipping either one wasted days.
  *
@@ -207,32 +208,66 @@ const ROUTE_METRES = ROUTE.reduce((a, l) => a + l.metres, 0);
 // that is only the renderer being slow.
 const LEG_WALL_CAP_MS = () => (software ? 120000 : 25000);
 
+// The contract fields, in the order they are printed. Anything else numeric on
+// __GAME__ is printed after them by name, so a game's own telemetry shows up
+// without this file knowing what it is called. An earlier version printed
+// `drops` and `busted`, two fields from the game it was first written against,
+// as `?` on every other game.
+const CONTRACT = ['pos', 'speed', 'fps', 'draws', 'tris', 'over', 'score'];
+function extras(t) {
+  if (!t) return [];
+  return Object.keys(t).filter((k) => !CONTRACT.includes(k) && typeof t[k] === 'number').sort()
+    .map((k) => `${k} ${t[k]}`);
+}
+
+// Poll pos and over together. `over` is part of the contract and for a long
+// time nothing here read it: the example game shoots the player dead on some
+// runs, and the run then held the arrow key against a death screen for the rest
+// of the route and blamed a wall.
+const poll = () => page.evaluate(() => {
+  const g = window.__GAME__;
+  return g ? { pos: g.pos, over: g.over === true } : null;
+});
+
 const frames = [];
 const samples = [];
 let idx = 0;
 let hasPos = true;
 let stalledLegs = 0;
 let driven = 0;
+let diedAt = null;      // seconds since the start button, if __GAME__.over turned true
+let legsBeforeDeath = 0;
+const startedAt = Date.now();
 for (const leg of ROUTE) {
   for (const k of leg.keys) await page.keyboard.down(k);
-  let prev = await page.evaluate(() => window.__GAME__?.pos);
-  if (Array.isArray(prev) && prev.length === 2) {
+  let dead = false;
+  let s = await poll();
+  let prev = s?.pos;
+  if (s?.over) dead = true;
+  else if (Array.isArray(prev) && prev.length === 2) {
     let legDist = 0;
     const until = Date.now() + LEG_WALL_CAP_MS();
     while (legDist < leg.metres && Date.now() < until) {
       await new Promise((r) => setTimeout(r, 50));
-      const p = await page.evaluate(() => window.__GAME__?.pos);
+      s = await poll();
+      if (s?.over) { dead = true; break; }
+      const p = s?.pos;
       if (!Array.isArray(p)) break;
       legDist += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
       prev = p;
     }
     driven += legDist;
-    if (legDist < leg.metres) stalledLegs++;
+    if (!dead && legDist < leg.metres) stalledLegs++;
   } else {
     // No position to steer by, so fall back to wall clock and say so, because
     // the movement check below is only meaningful with one.
     hasPos = false;
-    await new Promise((r) => setTimeout(r, 2600));
+    const until = Date.now() + 2600;
+    while (Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 50));
+      s = await poll();
+      if (s?.over) { dead = true; break; }
+    }
   }
   const t = await page.evaluate(() => window.__GAME__ || null);
   const shot = path.join(outDir, `f${idx}.png`);
@@ -240,8 +275,17 @@ for (const leg of ROUTE) {
   frames.push(shot);
   samples.push(t);
   console.log(`  frame ${idx}  speed ${t?.speed ?? '?'} m/s  pos ${t?.pos ?? '?'}  ` +
-              `fps ${t?.fps ?? '?'}  draws ${t?.draws ?? '?'}  tris ${t?.tris ?? '?'}`);
+              `fps ${t?.fps ?? '?'}  draws ${t?.draws ?? '?'}  tris ${t?.tris ?? '?'}` +
+              (t?.over ? '  over' : ''));
   for (const k of leg.keys) await page.keyboard.up(k);
+  if (dead) {
+    diedAt = (Date.now() - startedAt) / 1000;
+    legsBeforeDeath = idx;
+    console.log(`  __GAME__.over is true: the player died at ${diedAt.toFixed(0)} s during leg ` +
+                `${idx + 1}. Stopping here; the ${ROUTE.length - idx - 1} leg(s) after it will not run.`);
+    idx++;
+    break;
+  }
   idx++;
 }
 
@@ -291,7 +335,8 @@ server.close();
 // on any machine. A build that blew its draw budget by three and a half times
 // once passed this harness because the only performance gate was an fps
 // threshold that could never fire.
-const BUDGET = { draws: 900, tris: 1_700_000 };
+// 1.5M matches the figure quoted everywhere else in the repo; the two disagreed for a while.
+const BUDGET = { draws: 900, tris: 1_500_000 };
 const peakDraws = Math.max(...samples.filter(Boolean).map((s) => s.draws || 0));
 const peakTris = Math.max(...samples.filter(Boolean).map((s) => s.tris || 0));
 
@@ -305,6 +350,14 @@ if (escaped.size) {
                 `game is not a folder and will 404 wherever you host it: ` +
                 `${[...escaped].slice(0, 3).join(', ')}. Move them in and load with ./`);
 }
+if (diedAt !== null) {
+  // Death is the proximate cause, and the stall message would be a lie about a wall.
+  problems.push(`the player died (over=true) at ${diedAt.toFixed(0)} s after ${legsBeforeDeath} of ` +
+                `${ROUTE.length} legs; the remaining legs never ran. This route drives forward ` +
+                `without shooting, aiming or dodging, so a game that fights back kills it. The ` +
+                `example in this repo dies here on some runs for that reason. See docs/gates.md ` +
+                `and write the gate your game needs.`);
+}
 if (!hasPos) {
   problems.push(`the game reports no __GAME__.pos, so this ran on wall clock and nothing below ` +
                 `about movement means anything. Expose it.`);
@@ -313,8 +366,8 @@ if (!hasPos) {
                 `${LEG_WALL_CAP_MS() / 1000}s. Either the car is stuck on something, input is not ` +
                 `reaching the game${software ? ', this software rasteriser is slower still' : ''}, or ` +
                 `this route does not fit your game: it drives fifty metres forward and turns, which ` +
-                `walks an interior straight into a wall. The example in this repo fails here for that ` +
-                `reason. See docs/gates.md and write the gate your game needs.`);
+                `walks an interior straight into a wall. See docs/gates.md and write the gate your ` +
+                `game needs.`);
 }
 if (peakDraws > BUDGET.draws) problems.push(`${peakDraws} draw calls, over the ${BUDGET.draws} budget.`);
 if (peakTris > BUDGET.tris) problems.push(`${peakTris.toLocaleString()} triangles, over the ${BUDGET.tris.toLocaleString()} budget.`);
@@ -331,7 +384,10 @@ if (otherErrors.length) {
 }
 
 console.log(`\ndistance driven  ${moved.toFixed(1)} m  (route asks for ${ROUTE_METRES})`);
-console.log(`score            ${last.score ?? '?'}   drops ${last.collected ?? '?'}   busted ${last.busted ?? '?'}`);
+if (diedAt !== null) console.log(`player died      at ${diedAt.toFixed(0)} s, after ${legsBeforeDeath} of ${ROUTE.length} legs (over=true)`);
+if ('score' in last) console.log(`score            ${last.score}`);
+const other = extras(last);
+if (other.length) console.log(`telemetry        ${other.join('   ')}`);
 console.log(`peak draws       ${peakDraws}  (budget ${BUDGET.draws})`);
 console.log(`peak triangles   ${peakTris.toLocaleString()}  (budget ${BUDGET.tris.toLocaleString()})`);
 console.log(`frame rate       ${minFps} min${software ? '  (software rendering, measured but NOT a verdict)' : ''}`);

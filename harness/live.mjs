@@ -31,7 +31,10 @@ if (!url || !/^https?:\/\//.test(url)) {
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.split('=').slice(1).join('=').replace(/^["']|["']$/g, '') : d; };
 const DESKTOP = process.argv.includes('--desktop');
 const HOLD = arg('hold', '');
-const OUT = arg('out', 'live.png');
+// Default into _live/ rather than the working directory, so a run from the repo root does not
+// leave a stray live.png next to the README. The folder is ignored by git, like _playtest/.
+const OUT = arg('out', path.join('_live', 'live.png'));
+fs.mkdirSync(path.dirname(OUT), { recursive: true });
 
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage();

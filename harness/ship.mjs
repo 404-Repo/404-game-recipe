@@ -91,12 +91,19 @@ console.log('every module parses, every path stays inside the folder');
 
 if (STAMP) {
   const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
+  // The query string is optional in the match so that an already stamped specifier is
+  // RE-stamped. The first version required the closing quote to follow .js directly, so a
+  // second deploy left every ?v=<old> in place and printed success, which is the exact
+  // stale-module problem this exists to prevent, one deploy later.
+  const q = `(?:\\?[^'"]*)?`;
+  const re1 = new RegExp(`((?:from|import)\\s*\\(?\\s*['"])(\\.{1,2}\\/[^'"?]+\\.m?js)${q}(['"])`, 'g');
+  const re2 = new RegExp(`(<script[^>]*\\ssrc=['"])(\\.?\\/?[^'"?]+\\.m?js)${q}(['"])`, 'g');
   let n = 0;
   for (const f of [...scripts, ...pages]) {
     const before = fs.readFileSync(f, 'utf8');
     const after = before
-      .replace(/((?:from|import)\s*\(?\s*['"])(\.{1,2}\/[^'"?]+\.m?js)(['"])/g, `$1$2?v=${stamp}$3`)
-      .replace(/(<script[^>]*\ssrc=['"])(\.?\/?[^'"?]+\.m?js)(['"])/g, `$1$2?v=${stamp}$3`);
+      .replace(re1, `$1$2?v=${stamp}$3`)
+      .replace(re2, `$1$2?v=${stamp}$3`);
     if (after !== before) { fs.writeFileSync(f, after); n++; }
   }
   console.log(`stamped ${n} file(s) with ?v=${stamp}`);

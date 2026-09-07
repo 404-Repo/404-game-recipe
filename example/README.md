@@ -31,7 +31,7 @@ produces something real, not for a scaffold.
 | Assets kept | 33 |
 | Gate | 33/33 clean |
 | Draw calls | 594 desktop, 696 phone, against a 900 budget |
-| Triangles | 1.37M against a 1.7M budget |
+| Triangles | 1.37M against a 1.5M budget |
 | Frame rate | 60 on both |
 | Total size | 708 KB |
 | Critic rounds | 3 |
