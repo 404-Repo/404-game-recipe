@@ -106,3 +106,14 @@ showing: our first critic round is the one that passed the floor on every pair.
 
 If you can spare one more hour, spend it on the floor build. It is the only evidence you will
 have that any of this paid for itself.
+
+**What to ask a generation service for, whichever one you use.** The repo does not name a service
+and does not need one, but the shape of what you want is the same everywhere, and a reader with an
+account still has to work this out: one image per object, at a size you can use rather than the
+largest it offers, with a style sentence you reuse verbatim for the whole set. Two practical
+notes from a build that did this for 26 objects. Ask for the size you want if you can, because a
+service that only returns 2048 square PNGs hands you 130 MB you then have to downscale, and that
+downscale is where three of those references were quietly truncated to half a picture. And if the
+service has a length or duration input, check it is honoured: one music call here asked for 60
+seconds and returned 180.
+

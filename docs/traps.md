@@ -281,3 +281,47 @@ The fix is a second bake per block: the same geometry with every part whose larg
 under about 25 cm dropped, swapped in beyond 90 m or so. It took the peak from 1.55M to 1.24M in
 one change, and it is invisible in a filmstrip. Reach for it before you decimate anything, which
 you should not be doing at all.
+
+---
+
+## Baking buys draw calls with triangles
+
+`bakeStatic()` is the difference between a street of two hundred props being affordable and not,
+and every account of it, including the one above, quotes the draw call side. Measured on one build
+here, same four viewpoints, per block bakes:
+
+| | draws | triangles in view |
+|---|---|---|
+| every prop placed individually | 2231 | 0.97M |
+| baked per block | 406 | 1.22M |
+
+A baked block is one object with one bounding sphere, so frustum culling can no longer drop the
+half of it that is behind you: triangles went up 15 to 25 percent while draws fell by four fifths.
+That is a trade worth making almost every time, and it is a trade. If your triangle budget is the
+one that is tight, smaller blocks are the dial, and the same measurement will tell you where.
+
+The distance to swap in a coarser bake is likewise not a constant. This file used to say about
+90 m. In a night build with real fog everything past 66 m was invisible and the numbers that paid
+were 16, 30 and 66. Measure it against your own fog, do not carry a number out of someone else's.
+
+---
+
+## The loader drops userData, and re-origins your asset
+
+`ASSET()` merges by material as it loads, and the merge discards the `userData` on the nodes it
+collapses. So an asset that publishes `userData.lights` (the coordinates of its own lamps, which is
+the natural way to tell a level where the light in an object should be) arrives with nothing: the
+data is only reachable through a second load with `keepHierarchy: true`.
+
+Worse, and quieter: the loader recentres the asset onto an inner child. A point authored in the
+asset's own space needs that offset applied or every lamp you place from it sits slightly wrong,
+in a way that reads as sloppy placement rather than as a bug.
+
+`{ keepHierarchy: true }` also costs draw calls, and the number is larger than people expect. A
+rigged figure loaded that way measured 65 draw calls, and each of three pursuers 90: four
+characters were 335 of a 900 budget before the world drew anything. Everything rigid with respect
+to one joint can be merged per joint without losing motion, which took the same four figures to
+146. If you load with the hierarchy, plan to bake it back per joint.
+
+And one more from the same family: `ASSET()`'s clone shares materials. Cloning a mesh so one copy
+can fade turns a dozen shared materials into ninety and throws away every batch you had.

@@ -4,6 +4,7 @@
  *
  *   node harness/live.mjs https://you.github.io/yourgame/game/
  *   node harness/live.mjs <url> --hold="#stick"     hold that control instead of guessing
+ *   node harness/live.mjs <url> --start="#play"     press that control instead of #startb
  *   node harness/live.mjs <url> --desktop           a laptop viewport and a click
  *
  * The local gate proves your folder works. This proves the thing you actually gave someone works,
@@ -54,10 +55,13 @@ catch { problems.push('the page never signalled __READY__'); }
 const ready = ((Date.now() - t0) / 1000).toFixed(1);
 
 const before = await page.evaluate(() => (window.__GAME__ && window.__GAME__.pos) || null);
-const started = await page.evaluate(() => !!document.querySelector('#startb'));
-if (!started) problems.push('no #startb on the page: the harness could not find a real control to press');
-else if (DESKTOP) await page.click('#startb');
-else await page.touchscreen.tap(...await page.$eval('#startb', (b) => { const r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }));
+const START = arg('start', '#startb');
+const started = await page.evaluate((sel) => !!document.querySelector(sel), START);
+if (!started) problems.push(`no ${START} on the page: name your start control with --start="<selector>", ` +
+  'or the tool cannot press the thing a player presses. It looks for #startb by default and that is a ' +
+  'convention of this repo, not of the web.');
+else if (DESKTOP) await page.click(START);
+else await page.touchscreen.tap(...await page.$eval(START, (b) => { const r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }));
 await new Promise((r) => setTimeout(r, 1500));
 
 // hold something for four seconds: the named control, else a VISIBLE touch control, else a key.

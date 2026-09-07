@@ -71,8 +71,14 @@ const label = path.relative(process.cwd(), target) || target;
 // console-error count to say the world is missing. Reaching outside is warned
 // about at the end of the run instead.
 const GAME_PREFIX = '/__game__/';
+// audio is in here because the repo asks for audio: a build served its mp3s as octet-stream and
+// only worked because it fetched and decoded them by hand. An <audio src> would have failed.
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
-               '.png': 'image/png', '.json': 'application/json', '.css': 'text/css' };
+               '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
+               '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml',
+               '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.m4a': 'audio/mp4',
+               '.mp4': 'video/mp4', '.webm': 'video/webm', '.woff2': 'font/woff2',
+               '.glb': 'model/gltf-binary', '.wasm': 'application/wasm' };
 
 const MOUNT = path.dirname(target);
 const GAME_URL = `${GAME_PREFIX}${path.basename(target)}/`;

@@ -137,6 +137,11 @@ unstartable on every phone for weeks because every check drove it through its de
 To drive the game yourself, `node harness/serve.mjs <same dir>` and open the URL it prints. Both
 tools take a directory anywhere on disk.
 
+**Your game goes in its own folder, outside this repo.** Nothing here has a default and it is the
+first decision you make: `~/mygame/` with `assets/` inside it is fine, and every tool in `harness/`
+takes that directory as its argument from wherever it lives. Keep this repo as the thing you clone
+and read, not as the thing you build inside.
+
 **Your game must be a folder that works on its own.** Put `assets/` INSIDE the game directory and
 load with `./assets/thing.js`, the way [example/warehouse-fps](example/) does, so the whole thing
 can be zipped and hosted anywhere. The harness also serves the game's parent and falls back to
@@ -256,6 +261,12 @@ This is not a small cosmetic gap. A warehouse shooter built with this method was
 against real frames from the game it was imitating, and the property that separated the two sets
 with no errors, before any measurement was taken, was legible printed text on props. Everything
 else it lost on was downstream of that.
+
+An honest note on our own example: the four claims quoted in
+[docs/claims.md](docs/claims.md) come from a night market build, and a night market is exactly the
+subject where signage does the work. It can be done, and one was built from this repo in four
+hours, but the way through is to carry the signage as lit shape, colour and silhouette and to write
+"no glyphs anywhere" into your style lock before anyone generates a thing.
 
 Worth knowing because it is fixable in principle and nobody has done it: `harness/surfaces.js`
 already generates albedo, roughness and normal maps procedurally at load time from nothing but a

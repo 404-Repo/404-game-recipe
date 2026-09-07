@@ -123,6 +123,20 @@ between a gate that tests your game and one that tests your loading screen.
 
 ---
 
+## Make the route repeatable before you measure anything with it
+
+A gate that drives a slightly different line every run produces frames that differ for reasons that
+have nothing to do with the change you are testing. Five runs of near identical lighting on one
+build here returned ground medians of 41, 33, 20, 17 and 16, and two agents spent part of a round
+reading that as signal.
+
+Seed your steering, or drive fixed inputs, or teleport to fixed points and photograph from there.
+Whatever you do, run the gate twice on an unchanged build first and look at the spread: that number
+is the noise floor of every statistic you take from those frames, and any claim smaller than it is
+not a claim. This costs one run and it is the cheapest thing in this document.
+
+---
+
 ## Two things that will bite
 
 **A warning is not a gate.** An asset that fails to import, a texture that 404s, an audio file
@@ -132,6 +146,17 @@ be. We shipped a build for four rounds where three assets threw on import; the l
 fast. Anything that can silently drop content needs a hard check that fails the run. The cheapest
 one, and it costs nothing: parse every module before you ship, with
 [`harness/ship.mjs`](../harness/ship.mjs).
+
+**Your scripts live next to your game, and puppeteer does not resolve from there.** Every tool in
+this repo is a puppeteer script and yours will be too, but `import puppeteer from 'puppeteer'`
+resolves from the repo, not from your own game folder. Three agents on one run hit this
+independently. Either keep your gate inside the repo, symlink `node_modules` next to it, or use
+`createRequire` against the repo's copy. Nothing in the repo warned about this and every worked
+example it shows you is a script.
+
+**A phone viewport is not a phone.** `env(safe-area-inset-*)` reports 0 in headless Chrome, so a
+notch cannot be tested that way at all: hoist the insets into CSS variables you can override, or
+accept that the control nearest the bottom edge is untested until someone holds a real device.
 
 **Headless frame rates are software rendering, unless you look.** Headless Chrome falls back to
 SwiftShader on a machine with no usable GPU and the number is then two orders of magnitude out.

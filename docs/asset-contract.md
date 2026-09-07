@@ -113,6 +113,12 @@ affordable. It is also destructive: it welds every part into one mesh per materi
 the asset's `userData` along with the nodes it was attached to. A character loaded that way
 renders perfectly and can never move a limb, and no still frame will show you.
 
+It costs draw calls, and more than people expect: measured on one build, a rigged figure loaded
+this way was 65 draw calls and each of three pursuers 90, so four characters took 335 of a 900
+budget before the world drew anything. Anything rigid with respect to one joint can be merged per
+joint without losing any motion, which took those same four to 146. Load with the hierarchy, then
+bake it back per joint.
+
 For anything with moving parts, ask for the tree:
 
 ```js
