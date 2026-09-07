@@ -55,7 +55,7 @@ open-model path, and it is a rented one. It was built and tested with Claude Cod
 | [docs/claims.md](docs/claims.md) | the floor build, and turning reference frames into claims that can fail a round |
 | [docs/case-drive.md](docs/case-drive.md) | one build start to finish: what each round changed, what it scored, what it cost |
 | [docs/traps.md](docs/traps.md) | bugs in this domain that produce wrong output silently |
-| `harness/` | verify assets, play the game, check what you shipped, prove the live URL works |
+| `harness/` | verify assets, play the game, build the critic's blind pairs, check what you shipped, prove the live URL works |
 
 ## 1. The assets
 

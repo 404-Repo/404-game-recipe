@@ -142,6 +142,23 @@ capture that should run at 60 frames a second records at less than one.
 
 ---
 
+## The blind pairs
+
+The critic's instrument is a pair of frames side by side with the answer withheld, and the repo
+ships the tool for it:
+
+```bash
+node harness/pairs.mjs --mine game/_gate/f0.png game/_gate/f1.png --ref refs/bar/*.jpg --out work/critic1/bar
+```
+
+It writes `pair_01.png` onward with the side shuffled per pair, a `KEY.json` you never show the
+critic, and a `CONTACT.png` of every pair stacked. Look at the contact sheet before you send
+anything. A run here lost a whole critic round to a home made version of this tool that wrote
+eight identical sheets of broken image icons: the critic judged them, wrote a confident verdict on
+nothing, and the only reason anyone noticed is that all eight sheets were byte identical.
+
+---
+
 ## Checking the thing you deployed
 
 The gate proves your folder works. `harness/live.mjs` proves the URL you gave someone works, which

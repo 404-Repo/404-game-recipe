@@ -109,6 +109,15 @@
  * | option          | default      | what it does |
  * |---|---|---|
  * | `hour`          | `16.5`       | time of day, 0 to 24. Sets the sun's elevation and, through it, the whole palette. |
+ *
+ * AT NIGHT, READ THIS. Below the horizon this rig is a sky, a haze and a cool fill, and nothing
+ * else: the key light fades out across the horizon and the warm ground bounce goes with it, both
+ * by construction, because a directional light whose direction has gone negative lights every
+ * underside in the scene. So a night game lit by the rig ALONE has one colour temperature, which
+ * is the failure the rig exists to prevent, reached from the other side. It warns once when it
+ * notices. What a night scene needs is its own practicals: emissive surfaces for the lamps
+ * themselves, and a small number of real point or spot lights placed at them, warm, with a short
+ * range. Keep the rig for the sky, the haze and the tone curve, and let the market light itself.
  * | `azimuth`       | `250`        | compass bearing of the sun, degrees clockwise from north. East is 90. 250 is west south west, so shadows fall east north east. |
  * | `elevation`     | from `hour`  | sun elevation in degrees above the horizon. Set it to override the hour's own. |
  * | `sunrise`       | `6`          | hour the sun crosses the horizon going up. With `sunset`, this is the only thing that makes `hour` mean anything. |
@@ -689,6 +698,7 @@ export function createRig(THREE, renderer, scene, opts = {}) {
   // gives you nothing. The bloom threshold is derived from this number in two places, and the
   // composer builds asynchronously, so it cannot read it from wherever the key happens to live.
   let keyIntensity = 0;
+  let warnedNight = false;
 
   const col = (v) => ({ value: new THREE.Color(v[0], v[1], v[2]) });
   const atmosU = {
@@ -789,6 +799,20 @@ export function createRig(THREE, renderer, scene, opts = {}) {
     // zero, or a second unshadowed sun appears the first time setTime() is called
     sun.intensity = csm ? 0 : sunI;
     for (const l of csmLights()) { l.color.copy(sun.color); l.intensity = sunI; }
+    // A light of intensity 0 still renders a shadow map, because three keys that off castShadow
+    // and not off intensity: below the horizon that is a whole pass for nothing. Measured on one
+    // night scene: 1004 draw calls and 19k triangles a frame, all of it discarded.
+    for (const l of csmLights()) l.castShadow = !!o.shadows && sunI > 0.01;
+    if (!csm) sun.castShadow = !!o.shadows && sunI > 0.01;
+    // And say the quiet part out loud, once. Below the horizon this rig is a sky and a haze: the
+    // key is off by construction and the warm ground bounce goes with it, so a night scene lit by
+    // the rig ALONE has one colour temperature, which is the failure the rig exists to prevent.
+    if (sunPos.elevation < 0 && !warnedNight) {
+      warnedNight = true;
+      console.warn('[rig] the sun is below the horizon: the key light and the warm bounce are off, ' +
+        'so the rig is giving you sky fill, haze and a sky only. A night scene needs its own practical ' +
+        'lights (emissive surfaces plus a few point or spot lights at the lamps); see the header of harness/rig.js.');
+    }
 
     // The fill's colour is the sky a vertical face actually sees: the band between 12 and 55
     // degrees is most of the solid angle above a wall's horizon. Normalised to a hue and carried
@@ -955,6 +979,13 @@ export function createRig(THREE, renderer, scene, opts = {}) {
     };
     m.customProgramCacheKey = () => (hasPrev ? prevKey : '') + (csmHook ? '|csm' + cascades : '') +
       (useBounce ? '|bnc' : '') + (useEnvD ? '|envd' : '') + (useWrap ? '|wrap' : '') + (foggable ? '|aer' : '');
+    // A game that patches its own materials and then checks "is my hook still the one installed"
+    // will see this composite instead, read it as its patch being dropped, and re-wrap every
+    // frame until the shader stops compiling and everything it touched draws nothing. Leave a
+    // marker so that check can be written correctly: if `userData.rigPatched` is set, the rig has
+    // your hook and is calling it, and you must not re-wrap.
+    m.userData = m.userData || {};
+    m.userData.rigPatched = true;
     m.needsUpdate = true;
     return true;
   }

@@ -162,7 +162,13 @@ software = await page.evaluate(() => {
   } catch { return false; }
 });
 if (software) console.log('  (software rendering: frame rate below is not a perf verdict)');
-await page.evaluate(() => window.__START__ && window.__START__());
+// Press the real control, and only fall back to the debug hook if there is not one. Calling
+// __START__() directly is how a build here shipped unstartable on every phone for a fortnight:
+// every check started it through a hook, so nobody found that the button itself did nothing.
+const startedByButton = await page.evaluate(() => !!document.querySelector('#startb'));
+if (startedByButton) await page.click('#startb');
+else await page.evaluate(() => window.__START__ && window.__START__());
+if (!startedByButton) console.log('  (no #startb: started through window.__START__, so the real control is untested)');
 
 // A route that turns, so the filmstrip is not six pictures of the same street.
 //

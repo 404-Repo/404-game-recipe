@@ -44,6 +44,14 @@ separates the bar from the floor is measuring something the method is supposed t
 4. **Throw away the statistics that do not separate.** Keep a claim only if the bar and the floor
    land on different sides of it on **70 percent or more** of frames. We started with a dozen and
    kept eight; the four we dropped had felt like the most insightful ones.
+
+   Expect this test to filter nothing when your floor is very weak. On a night game here all eleven
+   statistics separated the bar from the floor at 85 to 100 percent, because a photograph and a
+   nearly black one pass build differ on everything. When that happens the test has told you
+   something real about your floor and nothing about your claims, and the honest move is to drop
+   the weakest ones by judgement and say that is what you did. A second control helps if you have
+   one: the same statistic measured on your own previous round separates a claim that is about
+   quality from a claim that is about the floor being bad.
 5. **Give every claim a "gameable by" line**, naming a concrete way a build could hit the number
    and still look wrong. A statistic will be optimised the moment it exists, and a bad statistic is
    worse than none because it certifies the failure.
